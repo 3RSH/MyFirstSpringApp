@@ -1,0 +1,5 @@
+spring.datasource.url: jdbc:postgresql://localhost:5432/workDB
+spring.datasource.username: root
+spring.datasource.password: qwerty
+spring.jpa.hibernate.ddl-auto: create
+version: 1.0.0
