@@ -3,9 +3,12 @@ package main.model;
 import java.sql.Date;
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.OneToMany;
 import javax.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
@@ -20,15 +23,19 @@ public class Vote {
   @Setter
   private int id;
 
-  @Column(name = "user_id")
+  @OneToMany
+  @Column(name = "user_id", nullable = false)
+  @JoinColumn(name = "id")
   @Getter
   @Setter
-  private int userId;
+  private User user;
 
-  @Column(name = "post_id")
+  @OneToMany(fetch = FetchType.LAZY)
+  @Column(name = "post_id", nullable = false)
+  @JoinColumn(name = "id")
   @Getter
   @Setter
-  private int postId;
+  private Post post;
 
   @Getter
   @Setter

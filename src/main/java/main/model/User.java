@@ -20,24 +20,27 @@ public class User {
   @Setter
   private int id;
 
-  @Column(name = "is_moderator")
+  @Column(name = "is_moderator", nullable = false)
   @Getter
   @Setter
   private short isModerator;
 
-  @Column(name = "reg_time")
+  @Column(name = "reg_time", nullable = false)
   @Getter
   @Setter
   private Date regTime;
 
+  @Column(nullable = false)
   @Getter
   @Setter
   private String name;
 
+  @Column(nullable = false)
   @Getter
   @Setter
   private String email;
 
+  @Column(nullable = false)
   @Getter
   @Setter
   private String password;
