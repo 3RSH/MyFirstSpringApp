@@ -1,6 +1,7 @@
 package main.model;
 
-import java.sql.Date;
+
+import java.sql.Timestamp;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
@@ -20,15 +21,17 @@ public class CaptchaCode {
   @Setter
   private int id;
 
+  @Column(columnDefinition = "TIMESTAMP WITH TIME ZONE", nullable = false)
   @Getter
   @Setter
-  private Date time;
+  private Timestamp time;
 
+  @Column(nullable = false)
   @Getter
   @Setter
   private String code;
 
-  @Column(name = "secret_code")
+  @Column(name = "secret_code", nullable = false)
   @Getter
   @Setter
   private String secretCode;

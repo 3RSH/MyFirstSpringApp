@@ -1,5 +1,6 @@
 package main.model;
 
+import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
@@ -18,14 +19,17 @@ public class GlobalSetting {
   @Setter
   private int id;
 
+  @Column(nullable = false)
   @Getter
   @Setter
   private String code;
 
+  @Column(nullable = false)
   @Getter
   @Setter
   private String name;
 
+  @Column(nullable = false)
   @Getter
   @Setter
   private String value;

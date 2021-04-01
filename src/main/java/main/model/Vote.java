@@ -1,6 +1,6 @@
 package main.model;
 
-import java.sql.Date;
+import java.sql.Timestamp;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
@@ -8,7 +8,7 @@ import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.JoinColumn;
-import javax.persistence.OneToMany;
+import javax.persistence.ManyToOne;
 import javax.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
@@ -23,26 +23,25 @@ public class Vote {
   @Setter
   private int id;
 
-  @OneToMany
-  @Column(name = "user_id", nullable = false)
-  @JoinColumn(name = "id")
+  @ManyToOne
+  @JoinColumn(name = "user_id", nullable = false)
   @Getter
   @Setter
   private User user;
 
-  @OneToMany(fetch = FetchType.LAZY)
-  @Column(name = "post_id", nullable = false)
-  @JoinColumn(name = "id")
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "post_id", nullable = false)
   @Getter
   @Setter
   private Post post;
 
+  @Column(columnDefinition = "TIMESTAMP WITH TIME ZONE", nullable = false)
   @Getter
   @Setter
-  private Date time;
+  private Timestamp time;
 
-  @Column(name = "is_active")
+  @Column(nullable = false)
   @Getter
   @Setter
-  private int value;
+  private short value;
 }

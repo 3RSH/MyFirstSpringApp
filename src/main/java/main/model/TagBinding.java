@@ -1,13 +1,12 @@
 package main.model;
 
-import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.JoinColumn;
-import javax.persistence.OneToMany;
+import javax.persistence.ManyToOne;
 import javax.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
@@ -22,16 +21,14 @@ public class TagBinding {
   @Setter
   private int id;
 
-  @OneToMany(fetch = FetchType.LAZY)
-  @Column(name = "post_id", nullable = false)
-  @JoinColumn(name = "id")
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "post_id", nullable = false)
   @Getter
   @Setter
   private Post post;
 
-  @OneToMany
-  @Column(name = "tag_id", nullable = false)
-  @JoinColumn(name = "id")
+  @ManyToOne
+  @JoinColumn(name = "tag_id", nullable = false)
   @Getter
   @Setter
   private Tag tag;

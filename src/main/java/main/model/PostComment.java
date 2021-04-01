@@ -1,6 +1,6 @@
 package main.model;
 
-import java.sql.Date;
+import java.sql.Timestamp;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
@@ -25,30 +25,29 @@ public class PostComment {
   private int id;
 
   @ManyToOne
-  @Column(name = "parent_id")
-  @JoinColumn(name = "id")
+  @JoinColumn(name = "parent_id")
   @Getter
   @Setter
   private PostComment parentPost;
 
   @ManyToOne(fetch = FetchType.LAZY)
-  @Column(name = "post_id", nullable = false)
-  @JoinColumn(name = "id")
+  @JoinColumn(name = "post_id", nullable = false)
   @Getter
   @Setter
   private Post post;
 
   @OneToOne
-  @Column(name = "user_id", nullable = false)
-  @JoinColumn(name = "id")
+  @JoinColumn(name = "user_id", nullable = false)
   @Getter
   @Setter
   private User user;
 
+  @Column(columnDefinition = "TIMESTAMP WITH TIME ZONE", nullable = false)
   @Getter
   @Setter
-  private Date time;
+  private Timestamp time;
 
+  @Column(columnDefinition = "TEXT", nullable = false)
   @Getter
   @Setter
   private String text;
