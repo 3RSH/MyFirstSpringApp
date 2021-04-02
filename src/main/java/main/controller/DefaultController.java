@@ -7,9 +7,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 @Controller
 public class DefaultController {
 
-//  @Autowired
-//  private MySqlDoingsRepository sqlRepository;
-
   @Value("${version}")
   private String appVersion;
 
