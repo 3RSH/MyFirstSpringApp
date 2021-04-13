@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+  xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.8.xsd">
+
+  <changeSet id="3" author="root">
+    <sqlFile dbms="postgresql"
+      encoding="UTF-8"
+      endDelimiter=";"
+      relativeToChangelogFile="true"
+      splitStatements="true"
+      stripComments="true"
+      path="sql/010-add-users.sql"/>
+    <rollback>
+      <sqlFile dbms="postgresql"
+        encoding="UTF-8"
+        endDelimiter=";"
+        relativeToChangelogFile="true"
+        splitStatements="true"
+        stripComments="true"
+        path="sql/010-drop-users.sql"/>
+    </rollback>
+  </changeSet>
+
+  <changeSet id="4" author="root">
+    <sqlFile dbms="postgresql"
+      encoding="UTF-8"
+      endDelimiter=";"
+      relativeToChangelogFile="true"
+      splitStatements="true"
+      stripComments="true"
+      path="sql/020-add-posts.sql"/>
+    <rollback>
+      <sqlFile dbms="postgresql"
+        encoding="UTF-8"
+        endDelimiter=";"
+        relativeToChangelogFile="true"
+        splitStatements="true"
+        stripComments="true"
+        path="sql/020-drop-posts.sql"/>
+    </rollback>
+  </changeSet>
+</databaseChangeLog>
