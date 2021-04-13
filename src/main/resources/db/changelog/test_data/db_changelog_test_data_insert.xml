@@ -42,4 +42,99 @@
         path="sql/020-drop-posts.sql"/>
     </rollback>
   </changeSet>
+
+  <changeSet id="5" author="root">
+    <sqlFile dbms="postgresql"
+      encoding="UTF-8"
+      endDelimiter=";"
+      relativeToChangelogFile="true"
+      splitStatements="true"
+      stripComments="true"
+      path="sql/030-add-post_votes.sql"/>
+    <rollback>
+      <sqlFile dbms="postgresql"
+        encoding="UTF-8"
+        endDelimiter=";"
+        relativeToChangelogFile="true"
+        splitStatements="true"
+        stripComments="true"
+        path="sql/030-drop-post_votes.sql"/>
+    </rollback>
+  </changeSet>
+
+  <changeSet id="6" author="root">
+    <sqlFile dbms="postgresql"
+      encoding="UTF-8"
+      endDelimiter=";"
+      relativeToChangelogFile="true"
+      splitStatements="true"
+      stripComments="true"
+      path="sql/040-add-tags.sql"/>
+    <rollback>
+      <sqlFile dbms="postgresql"
+        encoding="UTF-8"
+        endDelimiter=";"
+        relativeToChangelogFile="true"
+        splitStatements="true"
+        stripComments="true"
+        path="sql/040-drop-tags.sql"/>
+    </rollback>
+  </changeSet>
+
+  <changeSet id="7" author="root">
+    <sqlFile dbms="postgresql"
+      encoding="UTF-8"
+      endDelimiter=";"
+      relativeToChangelogFile="true"
+      splitStatements="true"
+      stripComments="true"
+      path="sql/050-add-tag2posts.sql"/>
+    <rollback>
+      <sqlFile dbms="postgresql"
+        encoding="UTF-8"
+        endDelimiter=";"
+        relativeToChangelogFile="true"
+        splitStatements="true"
+        stripComments="true"
+        path="sql/050-drop-tag2posts.sql"/>
+    </rollback>
+  </changeSet>
+
+  <changeSet id="8" author="root">
+    <sqlFile dbms="postgresql"
+      encoding="UTF-8"
+      endDelimiter=";"
+      relativeToChangelogFile="true"
+      splitStatements="true"
+      stripComments="true"
+      path="sql/060-add-comments.sql"/>
+    <rollback>
+      <sqlFile dbms="postgresql"
+        encoding="UTF-8"
+        endDelimiter=";"
+        relativeToChangelogFile="true"
+        splitStatements="true"
+        stripComments="true"
+        path="sql/060-drop-comments.sql"/>
+    </rollback>
+  </changeSet>
+
+  <changeSet id="9" author="root">
+    <sqlFile dbms="postgresql"
+      encoding="UTF-8"
+      endDelimiter=";"
+      relativeToChangelogFile="true"
+      splitStatements="true"
+      stripComments="true"
+      path="sql/070-add-global_settings.sql"/>
+    <rollback>
+      <sqlFile dbms="postgresql"
+        encoding="UTF-8"
+        endDelimiter=";"
+        relativeToChangelogFile="true"
+        splitStatements="true"
+        stripComments="true"
+        path="sql/070-drop-global_settings.sql"/>
+    </rollback>
+  </changeSet>
 </databaseChangeLog>
