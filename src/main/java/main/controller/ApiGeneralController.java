@@ -18,12 +18,14 @@ public class ApiGeneralController {
   private final SettingsServiceImpl settingsService;
   private final TagsServiceImpl tagsService;
 
+
   public ApiGeneralController(InitResponse initResponse,
       SettingsServiceImpl settingsService, TagsServiceImpl tagsService) {
     this.initResponse = initResponse;
     this.settingsService = settingsService;
     this.tagsService = tagsService;
   }
+
 
   @GetMapping("/init")
   private InitResponse init() {
@@ -37,7 +39,9 @@ public class ApiGeneralController {
 
   @GetMapping("/tag")
   private TagResponse tags(@RequestParam(required = false) String query) {
-    if (query == null) return tagsService.getTags();
+    if (query == null) {
+      return tagsService.getTags();
+    }
     return tagsService.getTag(query);
   }
 }

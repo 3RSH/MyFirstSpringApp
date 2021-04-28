@@ -11,9 +11,11 @@ public class ApiAuthController {
 
   private final CheckResponse userStatus;
 
+
   public ApiAuthController(CheckResponse userStatus) {
     this.userStatus = userStatus;
   }
+
 
   @GetMapping("/check")
   private CheckResponse check() {

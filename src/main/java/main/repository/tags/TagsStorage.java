@@ -11,9 +11,11 @@ public class TagsStorage implements TagsRepository {
 
   private final PostgresTagsRepository sqlTagsRepository;
 
+
   public TagsStorage(PostgresTagsRepository sqlTagsRepository) {
     this.sqlTagsRepository = sqlTagsRepository;
   }
+
 
   @Override
   public Tag getTag(int tagId) {
@@ -24,6 +26,7 @@ public class TagsStorage implements TagsRepository {
   @Override
   public List<Tag> getAllTags() {
     List<Tag> tags = new ArrayList<>();
+
     sqlTagsRepository.findAll().forEach(tags::add);
     return tags;
   }

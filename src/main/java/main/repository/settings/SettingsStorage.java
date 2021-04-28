@@ -9,9 +9,11 @@ public class SettingsStorage implements SettingsRepository {
 
   private final PostgresSettingsRepository sqlSettingsRepository;
 
+
   public SettingsStorage(PostgresSettingsRepository sqlSettingsRepository) {
     this.sqlSettingsRepository = sqlSettingsRepository;
   }
+
 
   @Override
   public GlobalSetting getSetting(int settingId) {

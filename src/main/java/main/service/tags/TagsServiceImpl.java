@@ -21,9 +21,10 @@ public class TagsServiceImpl implements TagsService {
   private final TagBindingsRepository tagBindingsStorage;
   private final PostsRepository postStorage;
 
+
   public TagsServiceImpl(@Qualifier("TagsStorage") TagsRepository tagsStorage,
       @Qualifier("TagBindingsStorage") TagBindingsRepository tagBindingsStorage,
-      @Qualifier("PostsStorage")PostsRepository postStorage) {
+      @Qualifier("PostsStorage") PostsRepository postStorage) {
     this.tagsStorage = tagsStorage;
     this.tagBindingsStorage = tagBindingsStorage;
     this.postStorage = postStorage;
@@ -32,25 +33,60 @@ public class TagsServiceImpl implements TagsService {
 
   @Override
   public TagResponse getTags() {
+    List<Tag> tags = tagsStorage.getAllTags();
+    List<TagBinding> tagBindings = tagBindingsStorage.getAllTagBindings();
 
-    int publicPostCount = 0;
+    List<Float> weights = getDWeights(tags, tagBindings, getAvailablePostCount(postStorage));
 
+    weights = getWeights(weights);
+
+    TagResponse tagResponse = new TagResponse();
+    tagResponse.setTags(getTagInfoList(tags, weights));
+
+    return tagResponse;
+  }
+
+  @Override
+  public TagResponse getTag(String query) {
+    List<Tag> tags = tagsStorage.getAllTags();
+    List<TagBinding> tagBindings = tagBindingsStorage.getAllTagBindings();
+
+    List<Float> weights = getDWeights(tags, tagBindings, getAvailablePostCount(postStorage));
+
+    weights = getWeights(weights);
+
+    TagResponse tagResponse = new TagResponse();
+    tagResponse.setTags(getTagInfoList(tags, weights, query));
+
+    return tagResponse;
+  }
+
+
+  private int getAvailablePostCount(PostsRepository postStorage) {
+    int availablePostCount = 0;
     long postCount = postStorage.count();
 
     for (int i = 1; i <= postCount; i++) {
-
       Post post = postStorage.getPost(i);
 
-      if (post.getIsActive() == 1
-          && post.getModerationStatus() == ModerationStatusType.ACCEPTED
-          && post.getTime().getTime() <= System.currentTimeMillis()) {
-        publicPostCount++;
+      if (isAvailable(post)) {
+        availablePostCount++;
       }
     }
 
-    List<Tag> tags = tagsStorage.getAllTags();
-    List<TagBinding> tagBindings = tagBindingsStorage.getAllTagBindings();
-    List<Float> weights = new ArrayList<>();
+    return availablePostCount;
+  }
+
+  private boolean isAvailable(Post post) {
+    return post.getIsActive() == 1
+        && post.getModerationStatus() == ModerationStatusType.ACCEPTED
+        && post.getTime().getTime() <= System.currentTimeMillis();
+  }
+
+  private List<Float> getDWeights(List<Tag> tags, List<TagBinding> tagBindings
+      , int availablePostCount) {
+
+    List<Float> dWeights = new ArrayList<>();
 
     for (Tag tag : tags) {
       int tagCount = 0;
@@ -58,35 +94,47 @@ public class TagsServiceImpl implements TagsService {
       for (TagBinding tagBinding : tagBindings) {
         Post post = tagBinding.getPost();
 
-        if (post.getIsActive() == 1
-            && post.getModerationStatus() == ModerationStatusType.ACCEPTED
-            && post.getTime().getTime() <= System.currentTimeMillis()) {
-          if (tagBinding.getTag().equals(tag)) tagCount++;
+        if (isAvailable(post) && tagBinding.getTag().equals(tag)) {
+          tagCount++;
         }
-
       }
 
-      float dWeight = (float)tagCount/publicPostCount;
-      weights.add(dWeight);
+      float dWeight = (float) tagCount / availablePostCount;
+      dWeights.add(dWeight);
     }
 
-    float maxDWeight = 0;
+    return dWeights;
+  }
 
-    for (float weight : weights) {
-      if (maxDWeight < weight) maxDWeight = weight;
-    }
+  private List<Float> getWeights(List<Float> dWeights) {
+    float factor = getNormalFactor(dWeights);
+    List<Float> weights = new ArrayList<>();
 
-    float k = 1/maxDWeight;
-
-    for (int i = 0; i < weights.size(); i++) {
-      float weight = weights.get(i) * k * 100;
-      weight = (float)(int)((weight - (int) weight) >= 0.5F
+    for (Float dWeight : dWeights) {
+      float weight = dWeight * factor * 100;
+      weight = (float) (int) ((weight - (int) weight) >= 0.5F
           ? weight + 1
           : weight) / 100;
 
-      weights.set(i, weight);
+      weights.add(weight);
     }
 
+    return weights;
+  }
+
+  private float getNormalFactor(List<Float> dWeights) {
+    float maxDWeight = 0;
+
+    for (float dWeight : dWeights) {
+      if (maxDWeight < dWeight) {
+        maxDWeight = dWeight;
+      }
+    }
+
+    return 1 / maxDWeight;
+  }
+
+  private List<TagInfo> getTagInfoList(List<Tag> tags, List<Float> weights) {
     List<TagInfo> tagInfoList = new ArrayList<>();
 
     for (int i = 0; i < tags.size(); i++) {
@@ -96,66 +144,10 @@ public class TagsServiceImpl implements TagsService {
       tagInfoList.add(tag);
     }
 
-    TagResponse tagResponse = new TagResponse();
-    tagResponse.setTags(tagInfoList);
-    return tagResponse;
+    return tagInfoList;
   }
 
-  @Override
-  public TagResponse getTag(String query) {
-    int publicPostCount = 0;
-
-    long postCount = postStorage.count();
-
-    for (int i = 1; i <= postCount; i++) {
-
-      Post post = postStorage.getPost(i);
-
-      if (post.getIsActive() == 1
-          && post.getModerationStatus() == ModerationStatusType.ACCEPTED
-          && post.getTime().getTime() <= System.currentTimeMillis()) {
-        publicPostCount++;
-      }
-    }
-
-
-    List<Tag> tags = tagsStorage.getAllTags();
-    List<TagBinding> tagBindings = tagBindingsStorage.getAllTagBindings();
-    List<Float> weights = new ArrayList<>();
-
-    for (Tag tag : tags) {
-      int tagCount = 0;
-
-      for (TagBinding tagBinding : tagBindings) {
-        Post post = tagBinding.getPost();
-
-        if (post.getIsActive() == 1
-            && post.getModerationStatus() == ModerationStatusType.ACCEPTED
-            && post.getTime().getTime() <= System.currentTimeMillis()) {
-          if (tagBinding.getTag().equals(tag)) tagCount++;
-        }
-
-      }
-
-      float dWeight = (float)tagCount/publicPostCount;
-      weights.add(dWeight);
-    }
-
-    float maxDWeight = 0;
-
-    for (float weight : weights) {
-      if (maxDWeight < weight) maxDWeight = weight;
-    }
-
-    float k = 1/maxDWeight;
-
-    for (float weight : weights) {
-      weight = weight * k * 100;
-      weight = (float)(int)((weight - (int) weight) >= 0.5F
-          ? weight + 1
-          : weight) / 100;
-    }
-
+  private List<TagInfo> getTagInfoList(List<Tag> tags, List<Float> weights, String query) {
     List<TagInfo> tagInfoList = new ArrayList<>();
 
     for (int i = 0; i < tags.size(); i++) {
@@ -168,9 +160,6 @@ public class TagsServiceImpl implements TagsService {
       }
     }
 
-    TagResponse tagResponse = new TagResponse();
-    tagResponse.setTags(tagInfoList);
-    return tagResponse;
-
+    return tagInfoList;
   }
 }

@@ -87,6 +87,7 @@ public class Post {
   @Setter
   private Set<Tag> tags = new HashSet<>();
 
+
   public enum ModerationStatusType {
     NEW,
     ACCEPTED,

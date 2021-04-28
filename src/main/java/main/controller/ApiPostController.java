@@ -13,9 +13,11 @@ public class ApiPostController {
 
   private final PostsServiceImpl postsService;
 
+
   public ApiPostController(PostsServiceImpl postsService) {
     this.postsService = postsService;
   }
+
 
   @GetMapping
   private PostPreviewResponse posts(@RequestParam int offset, @RequestParam int limit,

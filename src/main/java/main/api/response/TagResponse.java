@@ -7,10 +7,7 @@ import main.api.TagInfo;
 
 public class TagResponse {
 
-  private String title = "tags";
-
   @Getter
   @Setter
   private List<TagInfo> tags;
-
 }
