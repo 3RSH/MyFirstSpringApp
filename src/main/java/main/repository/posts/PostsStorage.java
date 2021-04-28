@@ -38,47 +38,5 @@ public class PostsStorage implements PostsRepository {
     return sqlPostsRepository.count();
   }
 
-//  @Override
-//  public List<PostPreview> getPostsPreview() {
-//    List<PostPreview> posts = new ArrayList<>();
-//
-//    PostPreview postPreview= new PostPreview();
-//    UserPreview userPreview = new UserPreview();
-//
-//    sqlPostsRepository.findAll().forEach(post -> {
-//      if (post.getIsActive() == 1
-//          && post.getModerationStatus() == ModerationStatusType.ACCEPTED) {
-//        if (post.getTime().getTime() <= System.currentTimeMillis()) {
-//          postPreview.setId(post.getId());
-//          postPreview.setTimestamp(post.getTime().getTime());
-//
-//          userPreview.setId(post.getUser().getId());
-//          userPreview.setName(post.getUser().getName());
-//          postPreview.setUser(userPreview);
-//
-//          postPreview.setTitle(post.getTitle());
-//          postPreview.setAnnounce(post.getText().length() > 150
-//              ? (post.getText().substring(0, 150) + "...")
-//              : post.getText());
-//
-//
-//          postPreview.setId(post.getId());
-//          postPreview.setId(post.getId());
-//          postPreview.setId(post.getId());
-//          postPreview.setId(post.getId());
-//          postPreview.setId(post.getId());
-//          postPreview.setId(post.getId());
-//
-//
-//
-//
-//
-//          posts.add(postPreview);
-//        }
-//      }
-//    });
-//    return posts;
-//  }
-
 
 }

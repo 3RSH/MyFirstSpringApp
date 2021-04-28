@@ -1,2 +1,2 @@
 delete from tags
-where id = 1;
+where id > 0 and id < 6;
