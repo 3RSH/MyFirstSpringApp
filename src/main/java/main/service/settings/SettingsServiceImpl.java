@@ -8,11 +8,11 @@ import org.springframework.stereotype.Service;
 @Service
 public class SettingsServiceImpl implements SettingsService {
 
-  private final SettingsRepository storage;
+  private final SettingsRepository repository;
 
 
-  public SettingsServiceImpl(@Qualifier("SettingsStorage") SettingsRepository storage) {
-    this.storage = storage;
+  public SettingsServiceImpl(@Qualifier("SettingsRepository") SettingsRepository repository) {
+    this.repository = repository;
   }
 
 
@@ -20,9 +20,9 @@ public class SettingsServiceImpl implements SettingsService {
   public SettingsResponse getGlobalSettings() {
     SettingsResponse settings = new SettingsResponse();
 
-    settings.setMultiuserMode(storage.getSetting(1).getValue().equals("YES"));
-    settings.setPostPremoderation(storage.getSetting(2).getValue().equals("YES"));
-    settings.setStatisticsIsPublic(storage.getSetting(3).getValue().equals("YES"));
+    settings.setMultiuserMode(repository.getOne(1).getValue().equals("YES"));
+    settings.setPostPremoderation(repository.getOne(2).getValue().equals("YES"));
+    settings.setStatisticsIsPublic(repository.getOne(3).getValue().equals("YES"));
 
     return settings;
   }

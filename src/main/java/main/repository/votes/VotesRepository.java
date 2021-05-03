@@ -1,8 +1,12 @@
 package main.repository.votes;
 
-public interface VotesRepository {
+import main.model.Vote;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+import org.springframework.stereotype.Service;
 
-  int getLikesCountByPostId(int postId);
+@Service("VotesRepository")
+@Repository
+public interface VotesRepository extends JpaRepository<Vote, Integer> {
 
-  int getDislikeCountByPostId(int postId);
 }

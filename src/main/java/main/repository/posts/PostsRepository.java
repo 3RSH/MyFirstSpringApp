@@ -1,13 +1,12 @@
 package main.repository.posts;
 
-import java.util.List;
 import main.model.Post;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+import org.springframework.stereotype.Service;
 
-public interface PostsRepository {
+@Service("PostsRepository")
+@Repository
+public interface PostsRepository extends JpaRepository<Post, Integer> {
 
-  Post getPost(int postId);
-
-  List<Post> getAllPosts();
-
-  long count();
 }

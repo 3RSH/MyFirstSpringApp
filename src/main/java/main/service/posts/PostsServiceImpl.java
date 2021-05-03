@@ -2,6 +2,7 @@ package main.service.posts;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 import main.api.PostPreview;
 import main.api.SortPostPreview;
 import main.api.UserPreview;
@@ -9,7 +10,6 @@ import main.api.response.PostPreviewResponse;
 import main.model.Post;
 import main.model.Post.ModerationStatusType;
 import main.repository.posts.PostsRepository;
-import main.repository.posts.PostsStorage;
 import main.repository.votes.VotesRepository;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
@@ -17,24 +17,24 @@ import org.springframework.stereotype.Service;
 @Service
 public class PostsServiceImpl implements PostsService {
 
-  private final PostsRepository postStorage;
-  private final VotesRepository voteStorage;
+  private final PostsRepository postsRepository;
+  private final VotesRepository votesRepository;
 
 
-  public PostsServiceImpl(@Qualifier("PostsStorage") PostsStorage postStorage,
-      @Qualifier("VotesStorage") VotesRepository voteStorage) {
-    this.voteStorage = voteStorage;
-    this.postStorage = postStorage;
+  public PostsServiceImpl(@Qualifier("PostsRepository") PostsRepository postsRepository,
+      @Qualifier("VotesRepository") VotesRepository votesRepository) {
+    this.votesRepository = votesRepository;
+    this.postsRepository = postsRepository;
   }
 
 
   @Override
   public PostPreviewResponse getPostsPreview(int offset, int limit, String mode) {
     List<PostPreview> posts = new ArrayList<>();
-    long postCount = postStorage.count();
+    long postCount = postsRepository.count();
 
     for (int i = 1; i <= postCount; i++) {
-      Post post = postStorage.getPost(i);
+      Post post = postsRepository.getOne(i);
 
       if (isAvailable(post)) {
         posts.add(getPostPreview(post));
@@ -97,8 +97,8 @@ public class PostsServiceImpl implements PostsService {
     postPreview.setUser(userPreview);
     postPreview.setTitle(post.getTitle());
     postPreview.setAnnounce(getAnnounce(post));
-    postPreview.setLikeCount(voteStorage.getLikesCountByPostId(post.getId()));
-    postPreview.setDislikeCount(voteStorage.getDislikeCountByPostId(post.getId()));
+    postPreview.setLikeCount(getLikesCountByPostId(post.getId()));
+    postPreview.setDislikeCount(getDislikeCountByPostId(post.getId()));
     postPreview.setCommentCount(post.getComments().size());
     postPreview.setViewCount(post.getViewCount());
 
@@ -124,5 +124,29 @@ public class PostsServiceImpl implements PostsService {
     }
 
     return announce.toString();
+  }
+
+  private int getLikesCountByPostId(int postId) {
+    AtomicInteger count = new AtomicInteger();
+
+    votesRepository.findAll().forEach(vote -> {
+      if (vote.getPost().getId() == postId && vote.getValue() == 1) {
+        count.getAndIncrement();
+      }
+    });
+
+    return count.get();
+  }
+
+  private int getDislikeCountByPostId(int postId) {
+    AtomicInteger count = new AtomicInteger();
+
+    votesRepository.findAll().forEach(vote -> {
+      if (vote.getPost().getId() == postId && vote.getValue() == -1) {
+        count.getAndIncrement();
+      }
+    });
+
+    return count.get();
   }
 }

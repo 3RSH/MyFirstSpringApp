@@ -17,26 +17,26 @@ import org.springframework.stereotype.Service;
 @Service
 public class TagsServiceImpl implements TagsService {
 
-  private final TagsRepository tagsStorage;
-  private final TagBindingsRepository tagBindingsStorage;
-  private final PostsRepository postStorage;
+  private final TagsRepository tagsRepository;
+  private final TagBindingsRepository tagBindingsRepository;
+  private final PostsRepository postsRepository;
 
 
-  public TagsServiceImpl(@Qualifier("TagsStorage") TagsRepository tagsStorage,
-      @Qualifier("TagBindingsStorage") TagBindingsRepository tagBindingsStorage,
-      @Qualifier("PostsStorage") PostsRepository postStorage) {
-    this.tagsStorage = tagsStorage;
-    this.tagBindingsStorage = tagBindingsStorage;
-    this.postStorage = postStorage;
+  public TagsServiceImpl(@Qualifier("TagsRepository") TagsRepository tagsRepository,
+      @Qualifier("TagBindingsRepository") TagBindingsRepository tagBindingsRepository,
+      @Qualifier("PostsRepository") PostsRepository postsRepository) {
+    this.tagsRepository = tagsRepository;
+    this.tagBindingsRepository = tagBindingsRepository;
+    this.postsRepository = postsRepository;
   }
 
 
   @Override
   public TagResponse getTags() {
-    List<Tag> tags = tagsStorage.getAllTags();
-    List<TagBinding> tagBindings = tagBindingsStorage.getAllTagBindings();
+    List<Tag> tags = tagsRepository.findAll();
+    List<TagBinding> tagBindings = tagBindingsRepository.findAll();
 
-    List<Float> weights = getDWeights(tags, tagBindings, getAvailablePostCount(postStorage));
+    List<Float> weights = getDWeights(tags, tagBindings, getAvailablePostCount(postsRepository));
 
     weights = getWeights(weights);
 
@@ -48,10 +48,10 @@ public class TagsServiceImpl implements TagsService {
 
   @Override
   public TagResponse getTag(String query) {
-    List<Tag> tags = tagsStorage.getAllTags();
-    List<TagBinding> tagBindings = tagBindingsStorage.getAllTagBindings();
+    List<Tag> tags = tagsRepository.findAll();
+    List<TagBinding> tagBindings = tagBindingsRepository.findAll();
 
-    List<Float> weights = getDWeights(tags, tagBindings, getAvailablePostCount(postStorage));
+    List<Float> weights = getDWeights(tags, tagBindings, getAvailablePostCount(postsRepository));
 
     weights = getWeights(weights);
 
@@ -67,7 +67,7 @@ public class TagsServiceImpl implements TagsService {
     long postCount = postStorage.count();
 
     for (int i = 1; i <= postCount; i++) {
-      Post post = postStorage.getPost(i);
+      Post post = postStorage.getOne(i);
 
       if (isAvailable(post)) {
         availablePostCount++;

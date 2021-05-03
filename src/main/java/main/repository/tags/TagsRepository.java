@@ -1,11 +1,12 @@
 package main.repository.tags;
 
-import java.util.List;
 import main.model.Tag;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+import org.springframework.stereotype.Service;
 
-public interface TagsRepository {
+@Service("TagsRepository")
+@Repository
+public interface TagsRepository extends JpaRepository<Tag, Integer> {
 
-  Tag getTag(int tagId);
-
-  List<Tag> getAllTags();
 }
