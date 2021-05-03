@@ -29,6 +29,8 @@ drop table if exists captcha_codes cascade;
 
 drop table if exists global_settings cascade;
 
+drop table if exists hibernate_sequences cascade;
+
 drop table if exists post_comments cascade;
 
 drop table if exists post_votes cascade;
@@ -40,3 +42,5 @@ drop table if exists tag2post cascade;
 drop table if exists tags cascade;
 
 drop table if exists users cascade;
+
+drop sequence if exists hibernate_sequence;
