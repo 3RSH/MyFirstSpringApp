@@ -4,14 +4,15 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import main.api.PostPreview;
-import main.api.SortPostPreview;
 import main.api.UserPreview;
 import main.api.response.PostPreviewResponse;
 import main.model.Post;
-import main.model.Post.ModerationStatusType;
 import main.repository.posts.PostsRepository;
 import main.repository.votes.VotesRepository;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -30,58 +31,40 @@ public class PostsServiceImpl implements PostsService {
 
   @Override
   public PostPreviewResponse getPostsPreview(int offset, int limit, String mode) {
-    List<PostPreview> posts = new ArrayList<>();
-    long postCount = postsRepository.count();
-
-    for (int i = 1; i <= postCount; i++) {
-      Post post = postsRepository.getOne(i);
-
-      if (isAvailable(post)) {
-        posts.add(getPostPreview(post));
-      }
-    }
+    List<PostPreview> postPreviews = new ArrayList<>();
+    long postCount;
+    Pageable page = PageRequest.of(offset / limit, limit);
+    Page<Post> postPage;
 
     switch (mode) {
-      case ("recent"):
-        posts.sort(SortPostPreview.RECENT);
-        break;
-
       case ("popular"):
-        posts.sort(SortPostPreview.POPULAR);
+        postPage = postsRepository.findPopularPosts(page);
         break;
 
       case ("best"):
-        posts.sort(SortPostPreview.BEST);
+        postPage = postsRepository.findBestPosts(page);
         break;
 
       case ("early"):
-        posts.sort(SortPostPreview.EARLY);
+        postPage = postsRepository.findEarlyPosts(page);
         break;
+
+      default:
+        postPage = postsRepository.findRecentPosts(page);
     }
 
-    List<PostPreview> postsResponse = new ArrayList<>();
+    postCount = postPage.getTotalElements();
 
-    for (int i = offset; i < (offset + limit); i++) {
-      if (i == posts.size()) {
-        break;
-      }
-
-      postsResponse.add(posts.get(i));
+    for (Post post : postPage) {
+      postPreviews.add(getPostPreview(post));
     }
 
     PostPreviewResponse postPreviewResponse = new PostPreviewResponse();
 
-    postPreviewResponse.setCount(posts.size());
-    postPreviewResponse.setPosts(postsResponse);
+    postPreviewResponse.setCount((int) postCount);
+    postPreviewResponse.setPosts(postPreviews);
 
     return postPreviewResponse;
-  }
-
-
-  private boolean isAvailable(Post post) {
-    return post.getIsActive() == 1
-        && post.getModerationStatus() == ModerationStatusType.ACCEPTED
-        && post.getTime().getTime() <= System.currentTimeMillis();
   }
 
   private PostPreview getPostPreview(Post post) {

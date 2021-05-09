@@ -20,8 +20,11 @@ public class ApiPostController {
 
 
   @GetMapping
-  private PostPreviewResponse posts(@RequestParam int offset, @RequestParam int limit,
-      @RequestParam String mode) {
+  private PostPreviewResponse posts(
+      @RequestParam(required = false, defaultValue = "0") int offset,
+      @RequestParam(required = false, defaultValue = "10") int limit,
+      @RequestParam(required = false, defaultValue = "recent") String mode) {
+
     return postsService.getPostsPreview(offset, limit, mode);
   }
 }
