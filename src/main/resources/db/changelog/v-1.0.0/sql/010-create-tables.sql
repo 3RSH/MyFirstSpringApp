@@ -1,3 +1,5 @@
+create sequence hibernate_sequence start 1 increment 1;
+
 create table captcha_codes (
        id int4 not null,
         code varchar(255) not null,
@@ -13,6 +15,14 @@ create table global_settings (
         value varchar(255) not null,
         primary key (id)
     );
+
+create table hibernate_sequences (
+       sequence_name varchar(255) not null,
+        next_val int8,
+        primary key (sequence_name)
+    );
+
+insert into hibernate_sequences(sequence_name, next_val) values ('default', 27);
 
 create table post_comments (
        id int4 not null,

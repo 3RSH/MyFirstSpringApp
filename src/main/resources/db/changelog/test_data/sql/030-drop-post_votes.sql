@@ -1,2 +1,2 @@
 delete from post_votes
-where id > 0 and id < 21;
+where id > 0 and id < 41;

@@ -11,4 +11,9 @@ spring.jpa.hibernate.ddl-auto: validate
 
 spring.liquibase.change-log: "classpath:db/changelog/db.changelog-master.xml"
 
-version:  1.0.0
+blog.title: DevPub
+blog.subtitle: Рассказы разработчиков
+blog.phone: +7 903 666-44-55
+blog.email: mail@mail.ru
+blog.copyright: Дмитрий Сергеев
+blog.copyrightFrom: 2005

@@ -16,7 +16,7 @@ import lombok.Setter;
 public class TagBinding {
 
   @Id
-  @GeneratedValue(strategy = GenerationType.AUTO)
+  @GeneratedValue(strategy = GenerationType.TABLE)
   @Getter
   @Setter
   private int id;
