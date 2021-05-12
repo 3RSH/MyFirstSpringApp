@@ -27,4 +27,13 @@ public class ApiPostController {
 
     return postsService.getPostsPreview(offset, limit, mode);
   }
+
+  @GetMapping("/search")
+  private PostPreviewResponse postsByQuery(
+      @RequestParam int offset,
+      @RequestParam int limit,
+      @RequestParam String query) {
+
+    return postsService.getPostsPreviewByQuery(offset, limit, query);
+  }
 }

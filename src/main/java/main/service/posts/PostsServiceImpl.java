@@ -53,6 +53,32 @@ public class PostsServiceImpl implements PostsService {
         postPage = postsRepository.findRecentPosts(page);
     }
 
+
+
+    postCount = postPage.getTotalElements();
+
+    for (Post post : postPage) {
+      postPreviews.add(getPostPreview(post));
+    }
+
+    PostPreviewResponse postPreviewResponse = new PostPreviewResponse();
+
+    postPreviewResponse.setCount((int) postCount);
+    postPreviewResponse.setPosts(postPreviews);
+
+    return postPreviewResponse;
+  }
+
+  @Override
+  public PostPreviewResponse getPostsPreviewByQuery(int offset, int limit, String query) {
+    if (query.matches("\\s*")) return getPostsPreview(offset, limit, "recent");
+
+    List<PostPreview> postPreviews = new ArrayList<>();
+    long postCount;
+    Pageable page = PageRequest.of(offset / limit, limit);
+
+    Page<Post> postPage = postsRepository.findAllByTitleContainingIgnoreCase(query, page);
+
     postCount = postPage.getTotalElements();
 
     for (Post post : postPage) {

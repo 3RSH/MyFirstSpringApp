@@ -1,5 +1,6 @@
 package main.repository.posts;
 
+import java.util.List;
 import main.model.Post;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -55,4 +56,6 @@ public interface PostsRepository extends JpaRepository<Post, Integer> {
       "AND p.time <= CURRENT_DATE() " +
       "ORDER BY time")
   Page<Post> findEarlyPosts(Pageable pageable);
+
+  Page<Post> findAllByTitleContainingIgnoreCase(String query, Pageable pageable);
 }
