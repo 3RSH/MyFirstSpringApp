@@ -90,20 +90,21 @@ public class PostsServiceImpl implements PostsService {
 
   private String getAnnounce(Post post) {
     StringBuilder announce = new StringBuilder();
+    String text = post.getText().replaceAll("<.*>", "");
 
-    if (post.getText().length() > 150) {
-      announce.append(post.getText(), 0, 50).append("\n")
-          .append(post.getText(), 50, 100).append("\n")
-          .append(post.getText(), 100, 150).append("...");
-    } else if (post.getText().length() > 100) {
-      announce.append(post.getText(), 0, 50).append("\n")
-          .append(post.getText(), 50, 100).append("\n")
-          .append(post.getText().substring(100));
-    } else if (post.getText().length() > 50) {
-      announce.append(post.getText(), 0, 50).append("\n")
-          .append(post.getText().substring(50));
+    if (text.length() > 150) {
+      announce.append(text, 0, 50).append("\n")
+          .append(text, 50, 100).append("\n")
+          .append(text, 100, 150).append("...");
+    } else if (text.length() > 100) {
+      announce.append(text, 0, 50).append("\n")
+          .append(text, 50, 100).append("\n")
+          .append(text.substring(100));
+    } else if (text.length() > 50) {
+      announce.append(text, 0, 50).append("\n")
+          .append(text.substring(50));
     } else {
-      return post.getText();
+      return text;
     }
 
     return announce.toString();
