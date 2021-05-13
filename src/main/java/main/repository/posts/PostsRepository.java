@@ -1,5 +1,6 @@
 package main.repository.posts;
 
+import java.sql.Timestamp;
 import java.util.List;
 import main.model.Post;
 import org.springframework.data.domain.Page;
@@ -42,10 +43,10 @@ public interface PostsRepository extends JpaRepository<Post, Integer> {
       "GROUP BY p.id " +
       "ORDER BY " +
       "SUM(" +
-          "CASE WHEN v.value IS NULL " +
-          "THEN 0 " +
-          "ELSE v.value " +
-          "END" +
+      "CASE WHEN v.value IS NULL " +
+      "THEN 0 " +
+      "ELSE v.value " +
+      "END" +
       ") DESC")
   Page<Post> findBestPosts(Pageable pageable);
 
@@ -58,4 +59,12 @@ public interface PostsRepository extends JpaRepository<Post, Integer> {
   Page<Post> findEarlyPosts(Pageable pageable);
 
   Page<Post> findAllByTitleContainingIgnoreCase(String query, Pageable pageable);
+
+  @Query("SELECT p.time " +
+      "FROM Post p " +
+      "WHERE p.isActive = 1 " +
+      "AND p.moderationStatus = 'ACCEPTED' " +
+      "AND p.time <= CURRENT_DATE() " +
+      "ORDER BY time")
+  List<Timestamp> getPublishTimes();
 }
