@@ -36,4 +36,13 @@ public class ApiPostController {
 
     return postsService.getPostsPreviewByQuery(offset, limit, query);
   }
+
+  @GetMapping("/byDate")
+  private PostPreviewResponse postsByDate(
+      @RequestParam int offset,
+      @RequestParam int limit,
+      @RequestParam String date) {
+
+    return postsService.getPostsPreviewByDate(offset, limit, date);
+  }
 }

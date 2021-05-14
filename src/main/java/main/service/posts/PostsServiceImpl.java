@@ -31,55 +31,47 @@ public class PostsServiceImpl implements PostsService {
 
   @Override
   public PostPreviewResponse getPostsPreview(int offset, int limit, String mode) {
-    List<PostPreview> postPreviews = new ArrayList<>();
-    long postCount;
     Pageable page = PageRequest.of(offset / limit, limit);
-    Page<Post> postPage;
 
     switch (mode) {
       case ("popular"):
-        postPage = postsRepository.findPopularPosts(page);
-        break;
+        return getPostPreviewResponse(postsRepository.findPopularPosts(page));
 
       case ("best"):
-        postPage = postsRepository.findBestPosts(page);
-        break;
+        return getPostPreviewResponse(postsRepository.findBestPosts(page));
 
       case ("early"):
-        postPage = postsRepository.findEarlyPosts(page);
-        break;
+        return getPostPreviewResponse(postsRepository.findEarlyPosts(page));
 
       default:
-        postPage = postsRepository.findRecentPosts(page);
+        return getPostPreviewResponse(postsRepository.findRecentPosts(page));
     }
-
-
-
-    postCount = postPage.getTotalElements();
-
-    for (Post post : postPage) {
-      postPreviews.add(getPostPreview(post));
-    }
-
-    PostPreviewResponse postPreviewResponse = new PostPreviewResponse();
-
-    postPreviewResponse.setCount((int) postCount);
-    postPreviewResponse.setPosts(postPreviews);
-
-    return postPreviewResponse;
   }
 
   @Override
   public PostPreviewResponse getPostsPreviewByQuery(int offset, int limit, String query) {
     if (query.matches("\\s*")) return getPostsPreview(offset, limit, "recent");
 
-    List<PostPreview> postPreviews = new ArrayList<>();
-    long postCount;
     Pageable page = PageRequest.of(offset / limit, limit);
 
-    Page<Post> postPage = postsRepository.findAllByTitleContainingIgnoreCase(query, page);
+    return getPostPreviewResponse(postsRepository.findAllByTitleContainingIgnoreCase(query, page));
+  }
 
-    postCount = postPage.getTotalElements();
+  @Override
+  public PostPreviewResponse getPostsPreviewByDate(int offset, int limit, String date) {
+    Pageable page = PageRequest.of(offset / limit, limit);
+    String[] dateParams = date.split("-");
+
+    return getPostPreviewResponse(postsRepository.findPostsByDate(
+        Integer.parseInt(dateParams[0]),
+        Integer.parseInt(dateParams[1]),
+        Integer.parseInt(dateParams[2]),
+        page));
+  }
+
+  private PostPreviewResponse getPostPreviewResponse(Page<Post> postPage) {
+    List<PostPreview> postPreviews = new ArrayList<>();
+    long postCount = postPage.getTotalElements();
 
     for (Post post : postPage) {
       postPreviews.add(getPostPreview(post));

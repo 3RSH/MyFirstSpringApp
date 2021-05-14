@@ -67,4 +67,15 @@ public interface PostsRepository extends JpaRepository<Post, Integer> {
       "AND p.time <= CURRENT_DATE() " +
       "ORDER BY time")
   List<Timestamp> getPublishTimes();
+
+  @Query("SELECT p " +
+      "FROM Post p " +
+      "WHERE p.isActive = 1 " +
+      "AND p.moderationStatus = 'ACCEPTED' " +
+      "AND p.time <= CURRENT_DATE() " +
+      "AND EXTRACT(year FROM p.time) = ?1 " +
+      "AND EXTRACT(month FROM p.time) = ?2 " +
+      "AND EXTRACT(day FROM p.time) = ?3 " +
+      "ORDER BY time")
+  Page<Post> findPostsByDate(int year, int month, int day, Pageable pageable);
 }
