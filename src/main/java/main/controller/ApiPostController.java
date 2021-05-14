@@ -45,4 +45,13 @@ public class ApiPostController {
 
     return postsService.getPostsPreviewByDate(offset, limit, date);
   }
+
+  @GetMapping("/byTag")
+  private PostPreviewResponse postsByTag(
+      @RequestParam int offset,
+      @RequestParam int limit,
+      @RequestParam String tag) {
+
+    return postsService.getPostsPreviewByTag(offset, limit, tag);
+  }
 }

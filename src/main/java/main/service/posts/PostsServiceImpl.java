@@ -50,7 +50,9 @@ public class PostsServiceImpl implements PostsService {
 
   @Override
   public PostPreviewResponse getPostsPreviewByQuery(int offset, int limit, String query) {
-    if (query.matches("\\s*")) return getPostsPreview(offset, limit, "recent");
+    if (query.matches("\\s*")) {
+      return getPostsPreview(offset, limit, "recent");
+    }
 
     Pageable page = PageRequest.of(offset / limit, limit);
 
@@ -67,6 +69,13 @@ public class PostsServiceImpl implements PostsService {
         Integer.parseInt(dateParams[1]),
         Integer.parseInt(dateParams[2]),
         page));
+  }
+
+  @Override
+  public PostPreviewResponse getPostsPreviewByTag(int offset, int limit, String tag) {
+    Pageable page = PageRequest.of(offset / limit, limit);
+
+    return getPostPreviewResponse(postsRepository.findPostsByTag(tag, page));
   }
 
   private PostPreviewResponse getPostPreviewResponse(Page<Post> postPage) {

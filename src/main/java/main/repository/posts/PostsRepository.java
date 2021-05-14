@@ -78,4 +78,18 @@ public interface PostsRepository extends JpaRepository<Post, Integer> {
       "AND EXTRACT(day FROM p.time) = ?3 " +
       "ORDER BY time")
   Page<Post> findPostsByDate(int year, int month, int day, Pageable pageable);
+
+  @Query("SELECT p " +
+      "FROM Post p " +
+      "LEFT JOIN TagBinding b " +
+      "ON b.post.id = p.id " +
+      "LEFT JOIN Tag t " +
+      "ON t.id = b.tag.id " +
+      "WHERE p.isActive = 1 " +
+      "AND p.moderationStatus = 'ACCEPTED' " +
+      "AND p.time <= CURRENT_DATE() " +
+      "AND t.name = ?1 " +
+      "GROUP BY p.id " +
+      "ORDER BY time")
+  Page<Post> findPostsByTag(String tag, Pageable pageable);
 }

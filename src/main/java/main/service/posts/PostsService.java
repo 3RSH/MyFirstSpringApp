@@ -9,4 +9,6 @@ public interface PostsService {
   PostPreviewResponse getPostsPreviewByQuery(int offset, int limit, String query);
 
   PostPreviewResponse getPostsPreviewByDate(int offset, int limit, String date);
+
+  PostPreviewResponse getPostsPreviewByTag(int offset, int limit, String tag);
 }
