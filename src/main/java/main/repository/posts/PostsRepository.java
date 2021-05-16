@@ -92,4 +92,9 @@ public interface PostsRepository extends JpaRepository<Post, Integer> {
       "GROUP BY p.id " +
       "ORDER BY time")
   Page<Post> findPostsByTag(String tag, Pageable pageable);
+
+  @Query("SELECT p " +
+      "FROM Post p " +
+      "WHERE p.id = ?1")
+  Post findPostsById(int id);
 }

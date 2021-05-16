@@ -1,8 +1,12 @@
 package main.controller;
 
 import main.api.response.PostPreviewResponse;
+import main.api.response.PostResponse;
 import main.service.posts.PostsServiceImpl;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -53,5 +57,14 @@ public class ApiPostController {
       @RequestParam String tag) {
 
     return postsService.getPostsPreviewByTag(offset, limit, tag);
+  }
+
+  @GetMapping("/{ID}")
+  private ResponseEntity getPostById(@PathVariable("ID") int id) {
+    PostResponse postResponse = postsService.getPostById(id);
+
+    return postResponse.getId() != 0
+        ? new ResponseEntity(postResponse, HttpStatus.OK)
+        : ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
   }
 }

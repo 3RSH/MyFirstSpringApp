@@ -1,6 +1,7 @@
 package main.service.posts;
 
 import main.api.response.PostPreviewResponse;
+import main.api.response.PostResponse;
 
 public interface PostsService {
 
@@ -11,4 +12,6 @@ public interface PostsService {
   PostPreviewResponse getPostsPreviewByDate(int offset, int limit, String date);
 
   PostPreviewResponse getPostsPreviewByTag(int offset, int limit, String tag);
+
+  PostResponse getPostById(int id);
 }
