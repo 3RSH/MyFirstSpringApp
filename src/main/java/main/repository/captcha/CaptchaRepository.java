@@ -17,4 +17,6 @@ public interface CaptchaRepository extends JpaRepository<CaptchaCode, Integer> {
   @Transactional
   @Query("DELETE FROM CaptchaCode c WHERE c.time <= ?1")
   void deleteOldCaptcha(Timestamp timeThreshold);
+
+  CaptchaCode findFirstBySecretCode(String secretCode);
 }
