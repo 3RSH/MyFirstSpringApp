@@ -32,7 +32,7 @@ public class UserServiceImpl implements UserService {
 
 
   @Override
-  public RegisterResponse addUser(Map<String, String> registerRequest) {
+  public synchronized RegisterResponse addUser(Map<String, String> registerRequest) {
     String password = registerRequest.get("password");
     String name = registerRequest.get("name");
     String email = registerRequest.get("e_mail");

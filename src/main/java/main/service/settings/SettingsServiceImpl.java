@@ -25,7 +25,7 @@ public class SettingsServiceImpl implements SettingsService {
 
     for (GlobalSetting setting : allSettings) {
 
-      switch (setting.getName()) {
+      switch (setting.getCode()) {
         case ("MULTIUSER_MODE"):
           settings.setMultiuserMode(setting.getValue().equals("YES"));
           break;
