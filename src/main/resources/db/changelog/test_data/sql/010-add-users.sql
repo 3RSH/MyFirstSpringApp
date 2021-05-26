@@ -9,3 +9,5 @@ values ('1', '1', (select now()), 'Admin', 'iteng@gmail.com', 'password'),
 ('8', '-1', (select now()), 'SCIfield', 'mmrnt@gmail.ua', 'password'),
 ('9', '-1', (select now()), 'Cot-Vasher', 'lomogamer@mail.ru', 'password'),
 ('10', '-1', (select now()), 'reFuktor', 'kalosha@yahoo.com', 'password');
+
+alter sequence users_id_seq restart with 11;

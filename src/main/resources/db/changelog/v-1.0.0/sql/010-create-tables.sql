@@ -16,14 +16,6 @@ create table global_settings (
         primary key (id)
     );
 
-create table hibernate_sequences (
-       sequence_name varchar(255) not null,
-        next_val int8,
-        primary key (sequence_name)
-    );
-
-insert into hibernate_sequences(sequence_name, next_val) values ('default', 27);
-
 create table post_comments (
        id int4 not null,
         text TEXT not null,
@@ -63,6 +55,8 @@ create table tag2post (
         primary key (post_id, tag_id)
     );
 
+create sequence tag2post_id_seq start with 1 increment by 1;
+
 create table tags (
        id int4 not null,
         name varchar(255) not null,
@@ -80,6 +74,8 @@ create table users (
         reg_time TIMESTAMP WITH TIME ZONE not null,
         primary key (id)
     );
+
+create sequence users_id_seq start with 1 increment by 1;
 
 alter table post_comments
        add constraint FKc3b7s6wypcsvua2ycn4o1lv2c
