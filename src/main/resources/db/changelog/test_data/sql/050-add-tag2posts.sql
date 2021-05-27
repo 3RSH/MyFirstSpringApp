@@ -25,3 +25,5 @@ values ('1', '1', '1'),
 ('24', '4', '2'),
 ('25', '5', '4'),
 ('26', '6', '2');
+
+alter sequence tag2post_id_seq restart with 27;

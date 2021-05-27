@@ -10,4 +10,9 @@ public class DefaultController {
   public String index() {
     return "index";
   }
+
+  @RequestMapping("/**/{path:[^.]*}")
+  public String forwardToIndex() {
+    return "forward:/";
+  }
 }
