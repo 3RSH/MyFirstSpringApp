@@ -43,8 +43,8 @@ public class ApiPostController {
 
   @GetMapping("/byDate")
   private PostPreviewResponse postsByDate(
-      @RequestParam int offset,
-      @RequestParam int limit,
+      @RequestParam(required = false, defaultValue = "0") int offset,
+      @RequestParam(required = false, defaultValue = "10") int limit,
       @RequestParam String date) {
 
     return postsService.getPostsPreviewByDate(offset, limit, date);
@@ -52,8 +52,8 @@ public class ApiPostController {
 
   @GetMapping("/byTag")
   private PostPreviewResponse postsByTag(
-      @RequestParam int offset,
-      @RequestParam int limit,
+      @RequestParam(required = false, defaultValue = "0") int offset,
+      @RequestParam(required = false, defaultValue = "10") int limit,
       @RequestParam String tag) {
 
     return postsService.getPostsPreviewByTag(offset, limit, tag);

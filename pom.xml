@@ -23,7 +23,7 @@
 
       <plugin>
         <groupId>org.liquibase</groupId>
-          <artifactId>liquibase-maven-plugin</artifactId>
+        <artifactId>liquibase-maven-plugin</artifactId>
         <version>3.8.5</version>
         <configuration>
           <propertyFile>src/main/resources/liquibase.properties</propertyFile>
@@ -66,6 +66,13 @@
       <artifactId>spring-boot-starter-parent</artifactId>
       <version>2.2.4.RELEASE</version>
       <type>pom</type>
+    </dependency>
+
+    <!-- https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter-security -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-security</artifactId>
+      <version>2.2.4.RELEASE</version>
     </dependency>
 
     <!-- https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter-thymeleaf -->
