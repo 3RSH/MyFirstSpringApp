@@ -1,5 +1,8 @@
 package main.config;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import javax.servlet.http.HttpServletResponse;
+import main.api.response.CheckLoginResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
@@ -38,7 +41,21 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
         .anyRequest().authenticated()
         .and()
         .formLogin().disable()
-        .httpBasic();
+        .httpBasic()
+        .and()
+        .logout()
+        .logoutUrl("/api/auth/logout")
+        .logoutSuccessHandler((httpServletRequest, httpServletResponse, authentication) -> {
+
+          CheckLoginResponse response = new CheckLoginResponse();
+
+          response.setResult(true);
+
+          String json = new ObjectMapper().writeValueAsString(response);
+
+          httpServletResponse.getWriter().write(json);
+          httpServletResponse.setStatus(HttpServletResponse.SC_OK);
+        });
   }
 
   @Override
