@@ -15,6 +15,7 @@ import javax.persistence.SequenceGenerator;
 import javax.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
+import main.security.Role;
 
 @Entity
 @Table(name = "users")
@@ -75,4 +76,9 @@ public class User {
   @Getter
   @Setter
   private Set<PostComment> comments = new HashSet<>();
+
+
+  public Role getRole() {
+    return isModerator == 1 ? Role.MODERATOR : Role.USER;
+  }
 }

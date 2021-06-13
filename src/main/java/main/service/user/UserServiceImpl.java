@@ -10,6 +10,8 @@ import main.model.User;
 import main.repository.captcha.CaptchaRepository;
 import main.repository.users.UsersRepository;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -52,7 +54,7 @@ public class UserServiceImpl implements UserService {
     user.setRegTime(Timestamp.valueOf(LocalDateTime.now()));
     user.setName(registerRequest.get("name"));
     user.setEmail(registerRequest.get("e_mail"));
-    user.setPassword(registerRequest.get("password"));
+    user.setPassword(passwordEncoder().encode(registerRequest.get("password")));
 
     usersRepository.saveAndFlush(user);
 
@@ -94,5 +96,9 @@ public class UserServiceImpl implements UserService {
     errorResponse.setErrors(errors);
 
     return errorResponse;
+  }
+
+  private PasswordEncoder passwordEncoder() {
+    return new BCryptPasswordEncoder(12);
   }
 }
