@@ -1,5 +1,6 @@
 package main.service.posts;
 
+import java.security.Principal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -13,11 +14,13 @@ import main.model.Post;
 import main.model.PostComment;
 import main.model.Tag;
 import main.repository.posts.PostsRepository;
+import main.repository.users.UsersRepository;
 import main.repository.votes.VotesRepository;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -25,12 +28,16 @@ public class PostsServiceImpl implements PostsService {
 
   private final PostsRepository postsRepository;
   private final VotesRepository votesRepository;
+  private final UsersRepository usersRepository;
 
 
-  public PostsServiceImpl(@Qualifier("PostsRepository") PostsRepository postsRepository,
-      @Qualifier("VotesRepository") VotesRepository votesRepository) {
+  public PostsServiceImpl(
+      @Qualifier("PostsRepository") PostsRepository postsRepository,
+      @Qualifier("VotesRepository") VotesRepository votesRepository,
+      @Qualifier("UsersRepository") UsersRepository usersRepository) {
     this.votesRepository = votesRepository;
     this.postsRepository = postsRepository;
+    this.usersRepository = usersRepository;
   }
 
 
@@ -50,6 +57,29 @@ public class PostsServiceImpl implements PostsService {
 
       default:
         return getPostPreviewResponse(postsRepository.findRecentPosts(page));
+    }
+  }
+
+  @Override
+  public PostPreviewResponse getMyPostsPreview(
+      int offset, int limit, String status, Principal principal) {
+    Pageable page = PageRequest.of(offset / limit, limit);
+    int userId = usersRepository.findFirstByEmail(
+        SecurityContextHolder.getContext().getAuthentication().getName()).
+        getId();
+
+    switch (status) {
+      case ("pending"):
+        return getPostPreviewResponse(postsRepository.findPendingPostsByUser(userId, page));
+
+      case ("declined"):
+        return getPostPreviewResponse(postsRepository.findDeclinedPostsByUser(userId, page));
+
+      case ("published"):
+        return getPostPreviewResponse(postsRepository.findPublishedPostsByUser(userId, page));
+
+      default:
+        return getPostPreviewResponse(postsRepository.findInactivePostsByUser(userId, page));
     }
   }
 

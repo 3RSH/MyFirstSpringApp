@@ -97,4 +97,35 @@ public interface PostsRepository extends JpaRepository<Post, Integer> {
       "FROM Post p " +
       "WHERE p.id = ?1")
   Post findPostsById(int id);
+
+  @Query("SELECT p " +
+      "FROM Post p " +
+      "WHERE p.isActive = 0 " +
+      "AND p.user.id = ?1 " +
+      "ORDER BY p.id")
+  Page<Post> findInactivePostsByUser(int userId, Pageable pageable);
+
+  @Query("SELECT p " +
+      "FROM Post p " +
+      "WHERE p.isActive = 1 " +
+      "AND p.moderationStatus = 'NEW' " +
+      "AND p.user.id = ?1 " +
+      "ORDER BY p.id")
+  Page<Post> findPendingPostsByUser(int userId, Pageable pageable);
+
+  @Query("SELECT p " +
+      "FROM Post p " +
+      "WHERE p.isActive = 1 " +
+      "AND p.moderationStatus = 'DECLINED' " +
+      "AND p.user.id = ?1 " +
+      "ORDER BY p.id")
+  Page<Post> findDeclinedPostsByUser(int userId, Pageable pageable);
+
+  @Query("SELECT p " +
+      "FROM Post p " +
+      "WHERE p.isActive = 1 " +
+      "AND p.moderationStatus = 'ACCEPTED' " +
+      "AND p.user.id = ?1 " +
+      "ORDER BY p.id")
+  Page<Post> findPublishedPostsByUser(int userId, Pageable pageable);
 }
