@@ -63,6 +63,7 @@ public class LoginServiceImpl implements LoginService {
         getCheckLoginResponse(usersRepository.findFirstByEmail(principal.getName()));
   }
 
+
   private CheckLoginResponse getCheckLoginResponse(User user) {
     UserResponse userResponse = new UserResponse();
 

@@ -1,6 +1,8 @@
 package main.service.posts;
 
 import java.security.Principal;
+import java.util.List;
+import main.api.response.PostEditResponse;
 import main.api.response.PostPreviewResponse;
 import main.api.response.PostResponse;
 
@@ -17,7 +19,8 @@ public interface PostsService {
   PostResponse getPostById(int id);
 
   PostPreviewResponse getMyPostsPreview(
-      int offset, int limit,
-      String mode,
-      Principal principal);
+      int offset, int limit, String mode, Principal principal);
+
+  PostEditResponse addPost(
+      long timestamp, short active, String title, List<String> tags, String text);
 }

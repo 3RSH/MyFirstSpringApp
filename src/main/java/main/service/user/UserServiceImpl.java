@@ -4,7 +4,6 @@ import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.util.Map;
 import main.api.RegisterErrors;
-import main.api.response.FailRegisterResponse;
 import main.api.response.RegisterResponse;
 import main.model.User;
 import main.repository.captcha.CaptchaRepository;
@@ -41,11 +40,11 @@ public class UserServiceImpl implements UserService {
     String captcha = registerRequest.get("captcha");
     String captchaSecret = registerRequest.get("captcha_secret");
 
-    FailRegisterResponse errorResponse
-        = checkRegisterRequest(password, name, email, captcha, captchaSecret);
+    RegisterResponse response
+        = getRegisterResponse(password, name, email, captcha, captchaSecret);
 
-    if (!errorResponse.isResult()) {
-      return errorResponse;
+    if (!response.isResult()) {
+      return response;
     }
 
     User user = new User();
@@ -58,44 +57,46 @@ public class UserServiceImpl implements UserService {
 
     usersRepository.saveAndFlush(user);
 
-    return new RegisterResponse();
+    return response;
   }
 
-  private FailRegisterResponse checkRegisterRequest(
+  private RegisterResponse getRegisterResponse(
       String password, String name, String email, String captcha, String captchaSecret) {
 
-    FailRegisterResponse errorResponse = new FailRegisterResponse();
+    RegisterResponse response = new RegisterResponse();
     RegisterErrors errors = new RegisterErrors();
 
     if (!captcha.equals(captchaRepository.findFirstBySecretCode(captchaSecret).getCode())) {
       errors.setCaptcha("Код с картинки введён неверно");
-      errorResponse.setResult(false);
+      response.setResult(false);
 
     }
 
     if (password.length() < 6) {
       errors.setPassword("Пароль короче 6-ти символов");
-      errorResponse.setResult(false);
+      response.setResult(false);
     }
 
     if (!name.matches(USERNAME_REGEX)) {
       errors.setName("Имя указано неверно");
-      errorResponse.setResult(false);
+      response.setResult(false);
     }
 
     if (!email.matches(EMAIL_REGEX)) {
       errors.setEmail("Почта указана неверно");
-      errorResponse.setResult(false);
+      response.setResult(false);
     }
 
     if (usersRepository.findFirstByEmail(email) != null) {
       errors.setEmail("Этот e-mail уже зарегистрирован");
-      errorResponse.setResult(false);
+      response.setResult(false);
     }
 
-    errorResponse.setErrors(errors);
+    if (!response.isResult()) {
+      response.setErrors(errors);
+    }
 
-    return errorResponse;
+    return response;
   }
 
   private PasswordEncoder passwordEncoder() {

@@ -1,26 +1,37 @@
 package main.service.posts;
 
 import java.security.Principal;
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import main.api.Comment;
 import main.api.CommentUserPreview;
+import main.api.PostErrors;
 import main.api.PostPreview;
 import main.api.UserPreview;
+import main.api.response.PostEditResponse;
 import main.api.response.PostPreviewResponse;
 import main.api.response.PostResponse;
 import main.model.Post;
 import main.model.PostComment;
 import main.model.Tag;
+import main.model.TagBinding;
+import main.model.User;
 import main.repository.posts.PostsRepository;
+import main.repository.tags.TagBindingsRepository;
+import main.repository.tags.TagsRepository;
 import main.repository.users.UsersRepository;
 import main.repository.votes.VotesRepository;
+import main.security.Permission;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -29,15 +40,21 @@ public class PostsServiceImpl implements PostsService {
   private final PostsRepository postsRepository;
   private final VotesRepository votesRepository;
   private final UsersRepository usersRepository;
+  private final TagsRepository tagsRepository;
+  private final TagBindingsRepository tagBindingsRepository;
 
 
   public PostsServiceImpl(
       @Qualifier("PostsRepository") PostsRepository postsRepository,
       @Qualifier("VotesRepository") VotesRepository votesRepository,
-      @Qualifier("UsersRepository") UsersRepository usersRepository) {
+      @Qualifier("UsersRepository") UsersRepository usersRepository,
+      @Qualifier("TagsRepository") TagsRepository tagsRepository,
+      @Qualifier("TagBindingsRepository") TagBindingsRepository tagBindingsRepository) {
     this.votesRepository = votesRepository;
     this.postsRepository = postsRepository;
     this.usersRepository = usersRepository;
+    this.tagsRepository = tagsRepository;
+    this.tagBindingsRepository = tagBindingsRepository;
   }
 
 
@@ -122,8 +139,7 @@ public class PostsServiceImpl implements PostsService {
       return postResponse;
     }
 
-    post.setViewCount(post.getViewCount() + 1);
-    postsRepository.saveAndFlush(post);
+    updateViewCount(post);
 
     postResponse.setId(post.getId());
     postResponse.setTimestamp(post.getTime().getTime() / 1000);
@@ -173,6 +189,58 @@ public class PostsServiceImpl implements PostsService {
 
     return postResponse;
   }
+
+  @Override
+  public PostEditResponse addPost(
+      long timestamp, short active, String title, List<String> tags, String text) {
+
+    PostEditResponse creationResponse = new PostEditResponse();
+    PostErrors creationErrors = getErrors(title, text, creationResponse);
+
+    if (!creationResponse.isResult()) {
+      creationResponse.setCreationErrors(creationErrors);
+      return creationResponse;
+    }
+
+    Post post = new Post();
+
+    UserDetails currentUserDetails
+        = (UserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+    User user = usersRepository.findFirstByEmail(currentUserDetails.getUsername());
+
+    post.setUser(user);
+    post.setIsActive(active);
+
+    long currentTime = System.currentTimeMillis();
+
+    post.setTime(timestamp < currentTime / 1000
+        ? new Timestamp(currentTime)
+        : new Timestamp(timestamp * 1000));
+    post.setTitle(title);
+    post.setText(text);
+
+    postsRepository.saveAndFlush(post);
+
+    for (String tagName : tags) {
+      Tag tag = tagsRepository.findFirstByName(tagName.toLowerCase());
+
+      if (tag == null) {
+        tag = new Tag();
+
+        tag.setName(tagName.toLowerCase());
+        tagsRepository.saveAndFlush(tag);
+      }
+
+      TagBinding tagBinding = new TagBinding();
+
+      tagBinding.setTag(tag);
+      tagBinding.setPost(post);
+      tagBindingsRepository.saveAndFlush(tagBinding);
+    }
+
+    return creationResponse;
+  }
+
 
   private PostPreviewResponse getPostPreviewResponse(Page<Post> postPage) {
     List<PostPreview> postPreviews = new ArrayList<>();
@@ -255,5 +323,38 @@ public class PostsServiceImpl implements PostsService {
     });
 
     return count.get();
+  }
+
+  private void updateViewCount(Post post) {
+    SecurityContext currentContext = SecurityContextHolder.getContext();
+    SimpleGrantedAuthority authority
+        = new SimpleGrantedAuthority(Permission.MODERATE.getPermission());
+
+    boolean isModerator = currentContext
+        .getAuthentication().getAuthorities().contains(authority);
+
+    boolean isOwner = post.getUser().getEmail()
+        .equals(currentContext.getAuthentication().getName());
+
+    if (!isModerator && !isOwner) {
+      post.setViewCount(post.getViewCount() + 1);
+      postsRepository.saveAndFlush(post);
+    }
+  }
+
+  private PostErrors getErrors(String title, String text, PostEditResponse response) {
+    PostErrors errors = new PostErrors();
+
+    if (title.length() < 3) {
+      errors.setTitle("Заголовок не установлен");
+      response.setResult(false);
+    }
+
+    if (text.length() < 50) {
+      errors.setText("Текст публикации слишком короткий");
+      response.setResult(false);
+    }
+
+    return errors;
   }
 }

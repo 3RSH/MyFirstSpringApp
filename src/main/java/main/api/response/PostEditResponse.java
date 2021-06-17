@@ -2,11 +2,12 @@ package main.api.response;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
 import lombok.Setter;
-import main.api.RegisterErrors;
+import main.api.PostErrors;
 
-public class RegisterResponse {
+public class PostEditResponse {
 
   @Getter
   @Setter
@@ -14,6 +15,7 @@ public class RegisterResponse {
 
   @Getter
   @Setter
+  @JsonProperty("errors")
   @JsonInclude(Include.NON_NULL)
-  private RegisterErrors errors;
+  private PostErrors creationErrors;
 }

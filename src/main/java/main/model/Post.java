@@ -17,6 +17,7 @@ import javax.persistence.ManyToMany;
 import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
 import javax.persistence.OneToOne;
+import javax.persistence.SequenceGenerator;
 import javax.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
@@ -26,7 +27,8 @@ import lombok.Setter;
 public class Post {
 
   @Id
-  @GeneratedValue(strategy = GenerationType.AUTO)
+  @SequenceGenerator(name = "postsIdSeq", sequenceName = "posts_id_seq", allocationSize = 1)
+  @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "postsIdSeq")
   @Getter
   @Setter
   private int id;
@@ -73,6 +75,7 @@ public class Post {
   @Getter
   @Setter
   private int viewCount = 0;
+
 
   @OneToMany(mappedBy = "post", cascade = CascadeType.ALL)
   @Getter

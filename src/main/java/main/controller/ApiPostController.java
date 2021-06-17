@@ -1,14 +1,19 @@
 package main.controller;
 
 import java.security.Principal;
+import main.api.request.AddPostRequest;
+import main.api.response.PostEditResponse;
 import main.api.response.PostPreviewResponse;
 import main.api.response.PostResponse;
 import main.service.posts.PostsServiceImpl;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -62,16 +67,16 @@ public class ApiPostController {
   }
 
   @GetMapping("/{ID}")
-  public ResponseEntity getPostById(@PathVariable("ID") int id) {
+  public ResponseEntity<PostResponse> getPostById(@PathVariable("ID") int id) {
     PostResponse postResponse = postsService.getPostById(id);
 
     return postResponse.getId() != 0
-        ? new ResponseEntity(postResponse, HttpStatus.OK)
+        ? new ResponseEntity<>(postResponse, HttpStatus.OK)
         : ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
   }
 
   @GetMapping("/my")
-  @PreAuthorize("hasAuthority('user:write')")
+  @PreAuthorize("hasAuthority('use')")
   public PostPreviewResponse myPosts(
       @RequestParam(required = false, defaultValue = "0") int offset,
       @RequestParam(required = false, defaultValue = "10") int limit,
@@ -79,5 +84,17 @@ public class ApiPostController {
       Principal principal) {
 
     return postsService.getMyPostsPreview(offset, limit, status, principal);
+  }
+
+  @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
+  @PreAuthorize("hasAuthority('use')")
+  public PostEditResponse addPost(@RequestBody AddPostRequest addPostRequest) {
+
+    return postsService.addPost(
+        addPostRequest.getTimestamp(),
+        addPostRequest.getActive(),
+        addPostRequest.getTitle(),
+        addPostRequest.getTags(),
+        addPostRequest.getText());
   }
 }

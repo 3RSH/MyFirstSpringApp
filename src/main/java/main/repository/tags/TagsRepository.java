@@ -9,4 +9,5 @@ import org.springframework.stereotype.Service;
 @Repository
 public interface TagsRepository extends JpaRepository<Tag, Integer> {
 
+  Tag findFirstByName(String name);
 }

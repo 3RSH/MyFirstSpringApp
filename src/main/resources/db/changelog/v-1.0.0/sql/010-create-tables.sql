@@ -48,6 +48,8 @@ create table posts (
         primary key (id)
     );
 
+create sequence posts_id_seq start with 1 increment by 1;
+
 create table tag2post (
        id int4 not null,
         post_id int4 not null,
@@ -62,6 +64,8 @@ create table tags (
         name varchar(255) not null,
         primary key (id)
     );
+
+create sequence tag_id_seq start with 1 increment by 1;
 
 create table users (
        id int4 not null,
