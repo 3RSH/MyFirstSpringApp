@@ -38,5 +38,5 @@ public class Tag {
       , inverseJoinColumns = @JoinColumn(name = "post_id"))
   @Getter
   @Setter
-  private Set<TagBinding> votes = new HashSet<>();
+  private Set<TagBinding> tagBindings = new HashSet<>();
 }

@@ -5,6 +5,7 @@ import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 import main.api.Comment;
 import main.api.CommentUserPreview;
 import main.api.PostErrors;
@@ -14,6 +15,7 @@ import main.api.response.PostEditResponse;
 import main.api.response.PostPreviewResponse;
 import main.api.response.PostResponse;
 import main.model.Post;
+import main.model.Post.ModerationStatusType;
 import main.model.PostComment;
 import main.model.Tag;
 import main.model.TagBinding;
@@ -31,7 +33,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -79,7 +80,7 @@ public class PostsServiceImpl implements PostsService {
 
   @Override
   public PostPreviewResponse getMyPostsPreview(
-      int offset, int limit, String status, Principal principal) {
+      int offset, int limit, String status) {
     Pageable page = PageRequest.of(offset / limit, limit);
     int userId = usersRepository.findFirstByEmail(
         SecurityContextHolder.getContext().getAuthentication().getName()).
@@ -192,7 +193,8 @@ public class PostsServiceImpl implements PostsService {
 
   @Override
   public PostEditResponse addPost(
-      long timestamp, short active, String title, List<String> tags, String text) {
+      long timestamp, short active, String title,
+      List<String> tags, String text, Principal principal) {
 
     PostEditResponse creationResponse = new PostEditResponse();
     PostErrors creationErrors = getErrors(title, text, creationResponse);
@@ -203,10 +205,7 @@ public class PostsServiceImpl implements PostsService {
     }
 
     Post post = new Post();
-
-    UserDetails currentUserDetails
-        = (UserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-    User user = usersRepository.findFirstByEmail(currentUserDetails.getUsername());
+    User user = usersRepository.findFirstByEmail(principal.getName());
 
     post.setUser(user);
     post.setIsActive(active);
@@ -231,16 +230,49 @@ public class PostsServiceImpl implements PostsService {
         tagsRepository.saveAndFlush(tag);
       }
 
-      TagBinding tagBinding = new TagBinding();
-
-      tagBinding.setTag(tag);
-      tagBinding.setPost(post);
-      tagBindingsRepository.saveAndFlush(tagBinding);
+      tagBindingsRepository.saveAndFlush(getTagBinding(tag, post));
     }
 
     return creationResponse;
   }
 
+  @Override
+  public PostEditResponse editPost(
+      int id, long timestamp, short active, String title, List<String> tags, String text) {
+
+    PostEditResponse editResponse = new PostEditResponse();
+    PostErrors creationErrors = getErrors(title, text, editResponse);
+
+    if (!editResponse.isResult()) {
+      editResponse.setCreationErrors(creationErrors);
+      return editResponse;
+    }
+
+    Post post = postsRepository.findPostsById(id);
+
+    if (userHasNotRightToEdit(post)) {
+      return editResponse;
+    }
+
+    post.setIsActive(active);
+
+    long currentTime = System.currentTimeMillis();
+
+    post.setTime(timestamp < currentTime / 1000
+        ? new Timestamp(currentTime)
+        : new Timestamp(timestamp * 1000));
+    post.setTitle(title);
+    post.setText(text);
+
+    if (isOwner(post)) {
+      post.setModerationStatus(ModerationStatusType.NEW);
+    }
+
+    postsRepository.saveAndFlush(post);
+    updateTags(post, tags);
+
+    return editResponse;
+  }
 
   private PostPreviewResponse getPostPreviewResponse(Page<Post> postPage) {
     List<PostPreview> postPreviews = new ArrayList<>();
@@ -326,17 +358,8 @@ public class PostsServiceImpl implements PostsService {
   }
 
   private void updateViewCount(Post post) {
-    SecurityContext currentContext = SecurityContextHolder.getContext();
-    SimpleGrantedAuthority authority
-        = new SimpleGrantedAuthority(Permission.MODERATE.getPermission());
 
-    boolean isModerator = currentContext
-        .getAuthentication().getAuthorities().contains(authority);
-
-    boolean isOwner = post.getUser().getEmail()
-        .equals(currentContext.getAuthentication().getName());
-
-    if (!isModerator && !isOwner) {
+    if (userHasNotRightToEdit(post)) {
       post.setViewCount(post.getViewCount() + 1);
       postsRepository.saveAndFlush(post);
     }
@@ -356,5 +379,88 @@ public class PostsServiceImpl implements PostsService {
     }
 
     return errors;
+  }
+
+  private boolean userHasNotRightToEdit(Post post) {
+    SecurityContext currentContext = SecurityContextHolder.getContext();
+    SimpleGrantedAuthority authority
+        = new SimpleGrantedAuthority(Permission.MODERATE.getPermission());
+
+    boolean isModerator = currentContext
+        .getAuthentication().getAuthorities().contains(authority);
+
+    return !isOwner(post) && !isModerator;
+  }
+
+  private boolean isOwner(Post post) {
+    SecurityContext currentContext = SecurityContextHolder.getContext();
+
+    return post.getUser().getEmail()
+        .equals(currentContext.getAuthentication().getName());
+  }
+
+  private TagBinding getTagBinding(Tag tag, Post post) {
+    TagBinding tagBinding = new TagBinding();
+
+    tagBinding.setTag(tag);
+    tagBinding.setPost(post);
+
+    return tagBinding;
+  }
+
+  private void updateTags(Post post, List<String> tags) {
+    List<String> currentTagNames =
+        post.getTags().stream().map(Tag::getName).collect(Collectors.toList());
+
+    List<Tag> tagsForCheck = new ArrayList<>();
+
+    for (String currentTagName : currentTagNames) {
+      boolean mustDeleted = true;
+
+      for (String tagName : tags) {
+        if (tagName.equalsIgnoreCase(currentTagName)) {
+          mustDeleted = false;
+          break;
+        }
+      }
+
+      if (mustDeleted) {
+        Tag tag = tagsRepository.findFirstByName(currentTagName);
+        TagBinding tagBinding = tagBindingsRepository.findFirstByTagAndPost(tag, post);
+
+        tagBindingsRepository.delete(tagBinding);
+        tagsForCheck.add(tag);
+      }
+    }
+
+    for (String tagName : tags) {
+      Tag tag = tagsRepository.findFirstByName(tagName.toLowerCase());
+
+      if (tag == null) {
+        tag = new Tag();
+
+        tag.setName(tagName.toLowerCase());
+        tagsRepository.save(tag);
+        tagBindingsRepository.save(getTagBinding(tag, post));
+      } else {
+        TagBinding tagBinding = tagBindingsRepository.findFirstByTagAndPost(tag, post);
+
+        if (tagBinding == null) {
+          tagBindingsRepository.save(getTagBinding(tag, post));
+        }
+      }
+    }
+
+    tagBindingsRepository.flush();
+
+    for (Tag tag : tagsForCheck) {
+      TagBinding tagBinding = tagBindingsRepository.findFirstByTag(tag);
+
+      if (tagBinding == null) {
+        tagsRepository.deleteByName(tag.getName());
+      }
+    }
+
+    tagsRepository.flush();
   }
 }

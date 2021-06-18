@@ -13,6 +13,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -80,21 +81,37 @@ public class ApiPostController {
   public PostPreviewResponse myPosts(
       @RequestParam(required = false, defaultValue = "0") int offset,
       @RequestParam(required = false, defaultValue = "10") int limit,
-      @RequestParam(required = false, defaultValue = "inactive") String status,
-      Principal principal) {
+      @RequestParam(required = false, defaultValue = "inactive") String status) {
 
-    return postsService.getMyPostsPreview(offset, limit, status, principal);
+    return postsService.getMyPostsPreview(offset, limit, status);
   }
 
   @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
   @PreAuthorize("hasAuthority('use')")
-  public PostEditResponse addPost(@RequestBody AddPostRequest addPostRequest) {
+  public PostEditResponse addPost(
+      @RequestBody AddPostRequest addPostRequest,
+      Principal principal) {
 
     return postsService.addPost(
         addPostRequest.getTimestamp(),
         addPostRequest.getActive(),
         addPostRequest.getTitle(),
         addPostRequest.getTags(),
-        addPostRequest.getText());
+        addPostRequest.getText(),
+        principal);
+  }
+
+  @PutMapping(path = "/{ID}", consumes = MediaType.APPLICATION_JSON_VALUE)
+  @PreAuthorize("hasAuthority('use')")
+  public PostEditResponse editPost(
+      @PathVariable("ID") int id,
+      @RequestBody AddPostRequest editPostRequest) {
+
+    return postsService.editPost(id,
+        editPostRequest.getTimestamp(),
+        editPostRequest.getActive(),
+        editPostRequest.getTitle(),
+        editPostRequest.getTags(),
+        editPostRequest.getText());
   }
 }

@@ -18,9 +18,12 @@ public interface PostsService {
 
   PostResponse getPostById(int id);
 
-  PostPreviewResponse getMyPostsPreview(
-      int offset, int limit, String mode, Principal principal);
+  PostPreviewResponse getMyPostsPreview(int offset, int limit, String mode);
 
   PostEditResponse addPost(
-      long timestamp, short active, String title, List<String> tags, String text);
+      long timestamp, short active, String title,
+      List<String> tags, String text, Principal principal);
+
+  PostEditResponse editPost(
+      int id, long timestamp, short active, String title, List<String> tags, String text);
 }
