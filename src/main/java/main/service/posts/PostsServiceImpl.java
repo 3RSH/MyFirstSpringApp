@@ -1,10 +1,16 @@
 package main.service.posts;
 
+import java.io.File;
+import java.io.IOException;
 import java.security.Principal;
 import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import main.api.Comment;
 import main.api.CommentUserPreview;
@@ -26,6 +32,7 @@ import main.repository.tags.TagsRepository;
 import main.repository.users.UsersRepository;
 import main.repository.votes.VotesRepository;
 import main.security.Permission;
+import org.apache.commons.io.FileUtils;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -136,7 +143,10 @@ public class PostsServiceImpl implements PostsService {
     Post post = postsRepository.findPostsById(id);
     PostResponse postResponse = new PostResponse();
 
-    if (post == null) {
+    if (post == null || (
+        !post.getModerationStatus().equals(ModerationStatusType.ACCEPTED) &&
+            userHasNotRightToEdit(post))) {
+
       return postResponse;
     }
 
@@ -208,6 +218,7 @@ public class PostsServiceImpl implements PostsService {
     User user = usersRepository.findFirstByEmail(principal.getName());
 
     post.setUser(user);
+
     post.setIsActive(active);
 
     long currentTime = System.currentTimeMillis();
@@ -215,7 +226,12 @@ public class PostsServiceImpl implements PostsService {
     post.setTime(timestamp < currentTime / 1000
         ? new Timestamp(currentTime)
         : new Timestamp(timestamp * 1000));
+
     post.setTitle(title);
+
+    post.setText("");
+    text = uploadingImages(text, post);
+
     post.setText(text);
 
     postsRepository.saveAndFlush(post);
@@ -261,17 +277,132 @@ public class PostsServiceImpl implements PostsService {
     post.setTime(timestamp < currentTime / 1000
         ? new Timestamp(currentTime)
         : new Timestamp(timestamp * 1000));
+
     post.setTitle(title);
+
+    text = uploadingImages(text, post);
+
     post.setText(text);
 
-    if (isOwner(post)) {
-      post.setModerationStatus(ModerationStatusType.NEW);
-    }
+    updateModerationStatus(post);
 
     postsRepository.saveAndFlush(post);
+    votesRepository.flush();
     updateTags(post, tags);
 
     return editResponse;
+  }
+
+
+  private void updateModerationStatus(Post post) {
+    if (isOwner(post)) {
+      post.setModerationStatus(ModerationStatusType.NEW);
+
+      post.setComments(new HashSet<>());
+      post.setViewCount(0);
+
+      votesRepository.deleteAll(votesRepository.findAllByPost(post));
+    }
+  }
+
+  private String uploadingImages(String text, Post post) {
+    List<String> tempPaths = getPathsFromText(text);
+    List<String> paths = new ArrayList<>(Collections.nCopies(tempPaths.size(), ""));
+
+    Collections.copy(paths, tempPaths);
+
+    for (int i = 0; i < paths.size(); i++) {
+      String path = paths.get(i).replaceFirst("upload", "images");
+      paths.set(i, path);
+    }
+
+    for (int i = 0; i < tempPaths.size(); i++) {
+      text = text.replace(tempPaths.get(i), paths.get(i));
+    }
+
+    convertPathsForFile(tempPaths);
+    convertPathsForFile(paths);
+
+    copyFiles(tempPaths, paths);
+
+    try {
+      FileUtils.cleanDirectory(new File("target/classes/static/upload"));
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
+
+    updateFiles(post, paths);
+
+    return text;
+  }
+
+  private void updateFiles(Post post, List<String> paths) {
+    String originalText = post.getText();
+    List<String> oldPaths = getPathsFromText(originalText);
+
+    convertPathsForFile(oldPaths);
+
+    for (String path : paths) {
+      oldPaths.remove(path);
+    }
+
+    deleteFiles(oldPaths);
+  }
+
+  private void deleteFiles(List<String> source) {
+    for (String path : source) {
+      path = path.substring(0, path.lastIndexOf("images/") + 9);
+      File dir = new File(path);
+
+      try {
+        FileUtils.deleteDirectory(dir);
+      } catch (IOException e) {
+        e.printStackTrace();
+      }
+    }
+  }
+
+  private void copyFiles(List<String> source, List<String> destination) {
+    for (int i = 0; i < source.size(); i++) {
+
+      File sourceFile = new File(source.get(i));
+      String destPath = destination.get(i);
+      File destinationDir = new File(destPath.substring(0, destPath.lastIndexOf("/")));
+      File destinationFile = new File(destination.get(i));
+
+      if (destinationDir.mkdirs()) {
+
+        try {
+          FileUtils.copyFile(sourceFile, destinationFile);
+        } catch (IOException e) {
+          e.printStackTrace();
+        }
+      }
+    }
+  }
+
+  private void convertPathsForFile(List<String> paths) {
+    for (int i = 0; i < paths.size(); i++) {
+      String path = paths.get(i);
+
+      path = path.substring(10, path.length() - 2);
+      path = path.replaceAll("\\\\", "/");
+      path = "target/classes/static" + path;
+
+      paths.set(i, path);
+    }
+  }
+
+  private List<String> getPathsFromText(String text) {
+    List<String> paths = new ArrayList<>();
+    Pattern pattern = Pattern.compile("<img src=\".+?\">");
+    Matcher matcher = pattern.matcher(text);
+
+    while (matcher.find()) {
+      paths.add(matcher.group());
+    }
+
+    return paths;
   }
 
   private PostPreviewResponse getPostPreviewResponse(Page<Post> postPage) {
@@ -313,7 +444,7 @@ public class PostsServiceImpl implements PostsService {
 
   private String getAnnounce(Post post) {
     StringBuilder announce = new StringBuilder();
-    String text = post.getText().replaceAll("<.*>", "");
+    String text = post.getText().replaceAll("<.*?>", "");
 
     if (text.length() > 150) {
       announce.append(text, 0, 50).append("\n")
