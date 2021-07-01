@@ -29,3 +29,5 @@ values ('1', null, '1', '1', (select now()), 'comment_comment_comment_comment_co
 ('28', '27', '4', '10', (select now()), 'comment_comment_comment_comment_comment_comment_comment_comment_'),
 ('29', null, '1', '10', (select now()), 'comment_comment_comment_comment_comment_comment_comment_comment_'),
 ('30', null, '3', '2', (select now()), 'comment_comment_comment_comment_comment_comment_comment_comment_');
+
+alter sequence comments_id_seq restart with 31;

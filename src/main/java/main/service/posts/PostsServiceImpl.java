@@ -6,7 +6,6 @@ import java.security.Principal;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
@@ -17,6 +16,7 @@ import main.api.CommentUserPreview;
 import main.api.PostErrors;
 import main.api.PostPreview;
 import main.api.UserPreview;
+import main.api.response.CommentResponse;
 import main.api.response.PostEditResponse;
 import main.api.response.PostPreviewResponse;
 import main.api.response.PostResponse;
@@ -26,6 +26,7 @@ import main.model.PostComment;
 import main.model.Tag;
 import main.model.TagBinding;
 import main.model.User;
+import main.repository.comments.CommentsRepository;
 import main.repository.posts.PostsRepository;
 import main.repository.tags.TagBindingsRepository;
 import main.repository.tags.TagsRepository;
@@ -37,6 +38,8 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -50,6 +53,7 @@ public class PostsServiceImpl implements PostsService {
   private final UsersRepository usersRepository;
   private final TagsRepository tagsRepository;
   private final TagBindingsRepository tagBindingsRepository;
+  private final CommentsRepository commentsRepository;
 
 
   public PostsServiceImpl(
@@ -57,12 +61,14 @@ public class PostsServiceImpl implements PostsService {
       @Qualifier("VotesRepository") VotesRepository votesRepository,
       @Qualifier("UsersRepository") UsersRepository usersRepository,
       @Qualifier("TagsRepository") TagsRepository tagsRepository,
-      @Qualifier("TagBindingsRepository") TagBindingsRepository tagBindingsRepository) {
+      @Qualifier("TagBindingsRepository") TagBindingsRepository tagBindingsRepository,
+      @Qualifier("CommentsRepository") CommentsRepository commentsRepository) {
     this.votesRepository = votesRepository;
     this.postsRepository = postsRepository;
     this.usersRepository = usersRepository;
     this.tagsRepository = tagsRepository;
     this.tagBindingsRepository = tagBindingsRepository;
+    this.commentsRepository = commentsRepository;
   }
 
 
@@ -143,8 +149,8 @@ public class PostsServiceImpl implements PostsService {
     Post post = postsRepository.findPostsById(id);
     PostResponse postResponse = new PostResponse();
 
-    if (post == null || (
-        !post.getModerationStatus().equals(ModerationStatusType.ACCEPTED) &&
+    if (post == null ||
+        (!post.getModerationStatus().equals(ModerationStatusType.ACCEPTED) &&
             userHasNotRightToEdit(post))) {
 
       return postResponse;
@@ -254,19 +260,20 @@ public class PostsServiceImpl implements PostsService {
 
   @Override
   public PostEditResponse editPost(
-      int id, long timestamp, short active, String title, List<String> tags, String text) {
+      int id, long timestamp, short active, String title,
+      List<String> tags, String text) {
 
     PostEditResponse editResponse = new PostEditResponse();
+    Post post = postsRepository.findPostsById(id);
+
+    if (userHasNotRightToEdit(post)) {
+      return editResponse;
+    }
+
     PostErrors creationErrors = getErrors(title, text, editResponse);
 
     if (!editResponse.isResult()) {
       editResponse.setCreationErrors(creationErrors);
-      return editResponse;
-    }
-
-    Post post = postsRepository.findPostsById(id);
-
-    if (userHasNotRightToEdit(post)) {
       return editResponse;
     }
 
@@ -293,12 +300,60 @@ public class PostsServiceImpl implements PostsService {
     return editResponse;
   }
 
+  @Override
+  public ResponseEntity<?> addComment(
+      int parentId, int postId, String text, Principal principal) {
+
+    Post post = postsRepository.findPostsById(postId);
+
+    if ((post == null) || (!post.getModerationStatus().equals(ModerationStatusType.ACCEPTED)) ||
+        (parentId != 0 &&
+            post.getComments().stream().noneMatch(comment -> comment.getId() == parentId))) {
+
+      return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+    }
+
+    PostEditResponse creationResponse = new PostEditResponse();
+    PostErrors creationErrors = getErrors(text, creationResponse);
+
+    if (!creationResponse.isResult()) {
+      creationResponse.setCreationErrors(creationErrors);
+      return new ResponseEntity<>(creationResponse, HttpStatus.BAD_REQUEST);
+    }
+
+    PostComment comment = new PostComment();
+    User user = usersRepository.findFirstByEmail(principal.getName());
+
+    comment.setUser(user);
+    comment.setPost(post);
+
+    if (parentId != 0) {
+      comment.setParentComment(commentsRepository.getOne(parentId));
+    }
+
+    long currentTime = System.currentTimeMillis();
+
+    comment.setTime(new Timestamp(currentTime));
+    comment.setText("");
+
+    text = uploadingImages(text);
+
+    comment.setText(text);
+
+    commentsRepository.saveAndFlush(comment);
+
+    CommentResponse response = new CommentResponse();
+
+    response.setId(comment.getId());
+
+    return new ResponseEntity<>(response, HttpStatus.OK);
+  }
+
 
   private void updateModerationStatus(Post post) {
     if (isOwner(post)) {
       post.setModerationStatus(ModerationStatusType.NEW);
-
-      post.setComments(new HashSet<>());
+      post.setComments(new ArrayList<>());
       post.setViewCount(0);
 
       votesRepository.deleteAll(votesRepository.findAllByPost(post));
@@ -332,6 +387,28 @@ public class PostsServiceImpl implements PostsService {
     }
 
     updateFiles(post, paths);
+
+    return text;
+  }
+
+  private String uploadingImages(String text) {
+    List<String> tempPaths = getPathsFromText(text);
+    List<String> paths = new ArrayList<>(Collections.nCopies(tempPaths.size(), ""));
+
+    Collections.copy(paths, tempPaths);
+
+    for (int i = 0; i < paths.size(); i++) {
+      String path = paths.get(i).replaceFirst("upload", "images");
+      paths.set(i, path);
+    }
+
+    for (int i = 0; i < tempPaths.size(); i++) {
+      text = text.replace(tempPaths.get(i), paths.get(i));
+    }
+
+    convertPathsForFile(tempPaths);
+    convertPathsForFile(paths);
+    copyFiles(tempPaths, paths);
 
     return text;
   }
@@ -506,6 +583,17 @@ public class PostsServiceImpl implements PostsService {
 
     if (text.length() < 50) {
       errors.setText("Текст публикации слишком короткий");
+      response.setResult(false);
+    }
+
+    return errors;
+  }
+
+  private PostErrors getErrors(String text, PostEditResponse response) {
+    PostErrors errors = new PostErrors();
+
+    if (text.length() < 3) {
+      errors.setText("Текст комментария не задан или слишком короткий");
       response.setResult(false);
     }
 

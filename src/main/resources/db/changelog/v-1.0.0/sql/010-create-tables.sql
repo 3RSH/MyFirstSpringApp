@@ -26,6 +26,8 @@ create table post_comments (
         primary key (id)
     );
 
+create sequence comments_id_seq start with 1 increment by 1;
+
 create table post_votes (
        id int4 not null,
         time TIMESTAMP WITH TIME ZONE not null,

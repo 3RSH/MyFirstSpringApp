@@ -1,7 +1,9 @@
 package main.model;
 
 import java.sql.Timestamp;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
@@ -80,7 +82,7 @@ public class Post {
   @OneToMany(mappedBy = "post", cascade = CascadeType.ALL)
   @Getter
   @Setter
-  private Set<PostComment> comments = new HashSet<>();
+  private List<PostComment> comments = new ArrayList<>();
 
   @ManyToMany(cascade = CascadeType.ALL)
   @JoinTable(name = "tag2post"
