@@ -54,3 +54,5 @@ drop sequence if exists tag2post_id_seq;
 drop sequence if exists tag_id_seq;
 
 drop sequence if exists users_id_seq;
+
+drop sequence if exists votes_id_seq;

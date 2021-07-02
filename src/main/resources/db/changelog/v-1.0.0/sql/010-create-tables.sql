@@ -37,6 +37,8 @@ create table post_votes (
         primary key (id)
     );
 
+create sequence votes_id_seq start with 1 increment by 1;
+
 create table posts (
        id int4 not null,
         is_active int2 not null,

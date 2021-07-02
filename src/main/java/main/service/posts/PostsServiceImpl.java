@@ -20,12 +20,14 @@ import main.api.response.CommentResponse;
 import main.api.response.PostEditResponse;
 import main.api.response.PostPreviewResponse;
 import main.api.response.PostResponse;
+import main.api.response.VoteResponse;
 import main.model.Post;
 import main.model.Post.ModerationStatusType;
 import main.model.PostComment;
 import main.model.Tag;
 import main.model.TagBinding;
 import main.model.User;
+import main.model.Vote;
 import main.repository.comments.CommentsRepository;
 import main.repository.posts.PostsRepository;
 import main.repository.tags.TagBindingsRepository;
@@ -347,6 +349,43 @@ public class PostsServiceImpl implements PostsService {
     response.setId(comment.getId());
 
     return new ResponseEntity<>(response, HttpStatus.OK);
+  }
+
+  @Override
+  public VoteResponse addVote(int postId, short voteValue) {
+    VoteResponse response = new VoteResponse();
+    SecurityContext currentContext = SecurityContextHolder.getContext();
+    String email = currentContext.getAuthentication().getName();
+    User user = usersRepository.findFirstByEmail(email);
+    Post post = postsRepository.findPostsById(postId);
+
+    if (post.getUser().equals(user)) {
+      return response;
+    }
+
+    Vote vote = votesRepository.findFirstByPostAndUser(post, user);
+
+    if (vote != null) {
+
+      if (vote.getValue() == voteValue) {
+        return response;
+      }
+
+      vote.setValue(voteValue);
+      response.setResult(true);
+      vote.setTime(new Timestamp(System.currentTimeMillis()));
+      votesRepository.saveAndFlush(vote);
+
+      return response;
+    }
+
+    vote = new Vote();
+    vote.setPost(post);
+    vote.setUser(user);
+    vote.setTime(new Timestamp(System.currentTimeMillis()));
+    votesRepository.saveAndFlush(vote);
+
+    return response;
   }
 
 

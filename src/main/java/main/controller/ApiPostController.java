@@ -2,9 +2,11 @@ package main.controller;
 
 import java.security.Principal;
 import main.api.request.AddPostRequest;
+import main.api.request.AddVoteRequest;
 import main.api.response.PostEditResponse;
 import main.api.response.PostPreviewResponse;
 import main.api.response.PostResponse;
+import main.api.response.VoteResponse;
 import main.service.posts.PostsServiceImpl;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -113,5 +115,18 @@ public class ApiPostController {
         editPostRequest.getTitle(),
         editPostRequest.getTags(),
         editPostRequest.getText());
+  }
+
+
+  @PostMapping(path = "/like", consumes = MediaType.APPLICATION_JSON_VALUE)
+  @PreAuthorize("hasAuthority('use')")
+  public VoteResponse addLike(@RequestBody AddVoteRequest voteRequest) {
+    return postsService.addVote(voteRequest.getPostId(), (short) 1);
+  }
+
+  @PostMapping(path = "/dislike", consumes = MediaType.APPLICATION_JSON_VALUE)
+  @PreAuthorize("hasAuthority('use')")
+  public VoteResponse addDislike(@RequestBody AddVoteRequest voteRequest) {
+    return postsService.addVote(voteRequest.getPostId(), (short) -1);
   }
 }

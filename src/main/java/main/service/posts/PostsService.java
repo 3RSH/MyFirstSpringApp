@@ -5,6 +5,7 @@ import java.util.List;
 import main.api.response.PostEditResponse;
 import main.api.response.PostPreviewResponse;
 import main.api.response.PostResponse;
+import main.api.response.VoteResponse;
 import org.springframework.http.ResponseEntity;
 
 public interface PostsService {
@@ -29,4 +30,6 @@ public interface PostsService {
       int id, long timestamp, short active, String title, List<String> tags, String text);
 
   ResponseEntity<?> addComment(int parentId, int postId, String text, Principal principal);
+
+  VoteResponse addVote(int postId, short voteValue);
 }
