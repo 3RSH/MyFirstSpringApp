@@ -20,7 +20,9 @@ import main.api.response.CommentResponse;
 import main.api.response.PostEditResponse;
 import main.api.response.PostPreviewResponse;
 import main.api.response.PostResponse;
+import main.api.response.StatisticsResponse;
 import main.api.response.VoteResponse;
+import main.model.GlobalSetting;
 import main.model.Post;
 import main.model.Post.ModerationStatusType;
 import main.model.PostComment;
@@ -30,6 +32,7 @@ import main.model.User;
 import main.model.Vote;
 import main.repository.comments.CommentsRepository;
 import main.repository.posts.PostsRepository;
+import main.repository.settings.SettingsRepository;
 import main.repository.tags.TagBindingsRepository;
 import main.repository.tags.TagsRepository;
 import main.repository.users.UsersRepository;
@@ -56,6 +59,7 @@ public class PostsServiceImpl implements PostsService {
   private final TagsRepository tagsRepository;
   private final TagBindingsRepository tagBindingsRepository;
   private final CommentsRepository commentsRepository;
+  private final SettingsRepository settingsRepository;
 
 
   public PostsServiceImpl(
@@ -64,13 +68,15 @@ public class PostsServiceImpl implements PostsService {
       @Qualifier("UsersRepository") UsersRepository usersRepository,
       @Qualifier("TagsRepository") TagsRepository tagsRepository,
       @Qualifier("TagBindingsRepository") TagBindingsRepository tagBindingsRepository,
-      @Qualifier("CommentsRepository") CommentsRepository commentsRepository) {
+      @Qualifier("CommentsRepository") CommentsRepository commentsRepository,
+      @Qualifier("SettingsRepository") SettingsRepository settingsRepository) {
     this.votesRepository = votesRepository;
     this.postsRepository = postsRepository;
     this.usersRepository = usersRepository;
     this.tagsRepository = tagsRepository;
     this.tagBindingsRepository = tagBindingsRepository;
     this.commentsRepository = commentsRepository;
+    this.settingsRepository = settingsRepository;
   }
 
 
@@ -354,10 +360,12 @@ public class PostsServiceImpl implements PostsService {
   @Override
   public VoteResponse addVote(int postId, short voteValue) {
     VoteResponse response = new VoteResponse();
-    SecurityContext currentContext = SecurityContextHolder.getContext();
-    String email = currentContext.getAuthentication().getName();
-    User user = usersRepository.findFirstByEmail(email);
+    User user = getCurrentUser();
     Post post = postsRepository.findPostsById(postId);
+
+    if (!post.getModerationStatus().equals(ModerationStatusType.ACCEPTED)) {
+      return response;
+    }
 
     if (post.getUser().equals(user)) {
       return response;
@@ -388,6 +396,53 @@ public class PostsServiceImpl implements PostsService {
     return response;
   }
 
+  @Override
+  public StatisticsResponse getMyStatistics() {
+    User user = getCurrentUser();
+    List<Post> posts = postsRepository.findPublishedPostsByUser(user.getId());
+
+    return getStatistics(posts);
+  }
+
+  @Override
+  public ResponseEntity<?> getAllStatistics() {
+    GlobalSetting statisticsSetting =
+        settingsRepository.findFirstByCodeContaining("STATISTICS_IS_PUBLIC");
+
+    if (statisticsSetting.getValue().equals("NO") && !isModerator()) {
+      return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
+    }
+
+    List<Post> posts = postsRepository.findAll();
+
+    return new ResponseEntity<>(getStatistics(posts), HttpStatus.OK);
+  }
+
+
+  private StatisticsResponse getStatistics(List<Post> posts) {
+    StatisticsResponse response = new StatisticsResponse();
+    int likesCount = 0, dislikesCount = 0, viewsCount = 0;
+    long firstPublication = System.currentTimeMillis() / 1000;
+
+    for (Post post : posts) {
+      likesCount += getLikesCountByPostId(post.getId());
+      dislikesCount += getDislikeCountByPostId(post.getId());
+      viewsCount += post.getViewCount();
+      long publicationTime = post.getTime().getTime() / 1000;
+
+      if (firstPublication > publicationTime) {
+        firstPublication = publicationTime;
+      }
+    }
+
+    response.setPostsCount(posts.size());
+    response.setLikesCount(likesCount);
+    response.setDislikesCount(dislikesCount);
+    response.setViewsCount(viewsCount);
+    response.setFirstPublication(firstPublication);
+
+    return response;
+  }
 
   private void updateModerationStatus(Post post) {
     if (isOwner(post)) {
@@ -640,14 +695,15 @@ public class PostsServiceImpl implements PostsService {
   }
 
   private boolean userHasNotRightToEdit(Post post) {
+    return !isOwner(post) && !isModerator();
+  }
+
+  private boolean isModerator() {
     SecurityContext currentContext = SecurityContextHolder.getContext();
     SimpleGrantedAuthority authority
         = new SimpleGrantedAuthority(Permission.MODERATE.getPermission());
 
-    boolean isModerator = currentContext
-        .getAuthentication().getAuthorities().contains(authority);
-
-    return !isOwner(post) && !isModerator;
+    return currentContext.getAuthentication().getAuthorities().contains(authority);
   }
 
   private boolean isOwner(Post post) {
@@ -720,5 +776,11 @@ public class PostsServiceImpl implements PostsService {
     }
 
     tagsRepository.flush();
+  }
+
+  private User getCurrentUser() {
+    SecurityContext currentContext = SecurityContextHolder.getContext();
+    String email = currentContext.getAuthentication().getName();
+    return usersRepository.findFirstByEmail(email);
   }
 }

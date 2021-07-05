@@ -9,4 +9,5 @@ import org.springframework.stereotype.Service;
 @Repository
 public interface SettingsRepository extends JpaRepository<GlobalSetting, Integer> {
 
+  GlobalSetting findFirstByCodeContaining(String code);
 }

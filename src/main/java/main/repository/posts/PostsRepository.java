@@ -128,4 +128,12 @@ public interface PostsRepository extends JpaRepository<Post, Integer> {
       "AND p.user.id = ?1 " +
       "ORDER BY p.id DESC")
   Page<Post> findPublishedPostsByUser(int userId, Pageable pageable);
+
+  @Query("SELECT p " +
+      "FROM Post p " +
+      "WHERE p.isActive = 1 " +
+      "AND p.moderationStatus = 'ACCEPTED' " +
+      "AND p.user.id = ?1 " +
+      "ORDER BY p.id DESC")
+  List<Post> findPublishedPostsByUser(int userId);
 }

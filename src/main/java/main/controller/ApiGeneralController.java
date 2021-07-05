@@ -5,6 +5,7 @@ import main.api.request.AddCommentRequest;
 import main.api.response.CalendarResponse;
 import main.api.response.InitResponse;
 import main.api.response.SettingsResponse;
+import main.api.response.StatisticsResponse;
 import main.api.response.TagResponse;
 import main.service.calendar.CalendarServiceImpl;
 import main.service.image.ImageServiceImpl;
@@ -87,5 +88,16 @@ public class ApiGeneralController {
         addCommentRequest.getPostId(),
         addCommentRequest.getText(),
         principal);
+  }
+
+  @GetMapping("/statistics/my")
+  @PreAuthorize("hasAuthority('use')")
+  public StatisticsResponse myStatistics() {
+    return postsService.getMyStatistics();
+  }
+
+  @GetMapping("/statistics/all")
+  public ResponseEntity<?> allStatistics() {
+    return postsService.getAllStatistics();
   }
 }
