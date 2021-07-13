@@ -136,4 +136,10 @@ public interface PostsRepository extends JpaRepository<Post, Integer> {
       "AND p.user.id = ?1 " +
       "ORDER BY p.id DESC")
   List<Post> findPublishedPostsByUser(int userId);
+
+  @Query("SELECT COUNT(p) " +
+      "FROM Post p " +
+      "WHERE p.isActive = 1 " +
+      "AND p.moderationStatus = 'NEW'")
+  int getPendingPostsCount();
 }

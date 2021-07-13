@@ -1,19 +1,19 @@
-package main.api;
+package main.api.response;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import lombok.Getter;
 import lombok.Setter;
+import main.api.RegisterErrors;
 
-public class PostErrors {
+public class EditProfileResponse {
+
+  @Getter
+  @Setter
+  private boolean result = true;
 
   @Getter
   @Setter
   @JsonInclude(Include.NON_NULL)
-  private String title;
-
-  @Getter
-  @Setter
-  @JsonInclude(Include.NON_NULL)
-  private String text;
+  private RegisterErrors errors;
 }

@@ -1,6 +1,8 @@
 package main.controller;
 
 import java.security.Principal;
+import java.util.HashMap;
+import java.util.Map;
 import main.api.request.AddCommentRequest;
 import main.api.response.CalendarResponse;
 import main.api.response.InitResponse;
@@ -12,6 +14,7 @@ import main.service.image.ImageServiceImpl;
 import main.service.posts.PostsServiceImpl;
 import main.service.settings.SettingsServiceImpl;
 import main.service.tags.TagsServiceImpl;
+import main.service.user.UserServiceImpl;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -33,12 +36,14 @@ public class ApiGeneralController {
   private final CalendarServiceImpl calendarService;
   private final ImageServiceImpl imageService;
   private final PostsServiceImpl postsService;
+  private final UserServiceImpl userService;
 
 
   public ApiGeneralController(
       InitResponse initResponse, SettingsServiceImpl settingsService,
       TagsServiceImpl tagsService, CalendarServiceImpl calendarService,
-      ImageServiceImpl imageService, PostsServiceImpl postsService) {
+      ImageServiceImpl imageService, PostsServiceImpl postsService,
+      UserServiceImpl userService) {
 
     this.initResponse = initResponse;
     this.settingsService = settingsService;
@@ -46,6 +51,7 @@ public class ApiGeneralController {
     this.calendarService = calendarService;
     this.imageService = imageService;
     this.postsService = postsService;
+    this.userService = userService;
   }
 
 
@@ -99,5 +105,37 @@ public class ApiGeneralController {
   @GetMapping("/statistics/all")
   public ResponseEntity<?> allStatistics() {
     return postsService.getAllStatistics();
+  }
+
+  @PostMapping(value = "/profile/my", consumes = MediaType.APPLICATION_JSON_VALUE)
+  @PreAuthorize("hasAuthority('use')")
+  public ResponseEntity<?> editProfile(@RequestBody Map<String, String> editRequest) {
+    return userService.editUser(editRequest);
+  }
+
+  @PostMapping(value = "/profile/my", consumes = "multipart/form-data")
+  @PreAuthorize("hasAuthority('use')")
+  public ResponseEntity<?> editProfile(
+      @RequestParam("photo") MultipartFile file,
+      @RequestParam("name") String name,
+      @RequestParam("email") String email,
+      @RequestParam("removePhoto") String removePhoto,
+      @RequestParam(name = "password", required = false) String password) {
+
+    ResponseEntity<?> responseEntity = imageService.addAvatar(file);
+
+    if (responseEntity.getStatusCode().isError()) {
+      return responseEntity;
+    }
+
+    Map<String, String> request = new HashMap<>();
+
+    request.put("name", name);
+    request.put("email", email);
+    request.put("password", password);
+    request.put("removePhoto", removePhoto);
+    request.put("photo", String.valueOf(responseEntity.getBody()));
+
+    return userService.editUser(request);
   }
 }

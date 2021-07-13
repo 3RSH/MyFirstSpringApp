@@ -5,6 +5,7 @@ import java.util.Map;
 import main.api.response.CheckLoginResponse;
 import main.api.response.UserResponse;
 import main.model.User;
+import main.repository.posts.PostsRepository;
 import main.repository.users.UsersRepository;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -20,13 +21,16 @@ import org.springframework.stereotype.Service;
 public class LoginServiceImpl implements LoginService {
 
   private final UsersRepository usersRepository;
+  private final PostsRepository postsRepository;
   private final AuthenticationManager authenticationManager;
 
 
   public LoginServiceImpl(
       @Qualifier("UsersRepository") UsersRepository usersRepository,
+      @Qualifier("PostsRepository") PostsRepository postsRepository,
       AuthenticationManager authenticationManager) {
     this.usersRepository = usersRepository;
+    this.postsRepository = postsRepository;
     this.authenticationManager = authenticationManager;
   }
 
@@ -67,9 +71,16 @@ public class LoginServiceImpl implements LoginService {
   private CheckLoginResponse getCheckLoginResponse(User user) {
     UserResponse userResponse = new UserResponse();
 
-    userResponse.setEmail(user.getEmail());
     userResponse.setId(user.getId());
-    userResponse.setModeration(user.getIsModerator() == 1);
+    userResponse.setName(user.getName());
+    userResponse.setPhoto(user.getPhoto());
+    userResponse.setEmail(user.getEmail());
+
+    if (user.getIsModerator() == 1) {
+      userResponse.setModeration(true);
+      userResponse.setSetting(true);
+      userResponse.setModerationCount(postsRepository.getPendingPostsCount());
+    }
 
     CheckLoginResponse checkLoginResponse = new CheckLoginResponse();
 
