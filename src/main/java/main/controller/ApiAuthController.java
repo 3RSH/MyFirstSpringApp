@@ -8,7 +8,9 @@ import main.api.response.RegisterResponse;
 import main.service.captcha.CaptchaServiceImpl;
 import main.service.login.LoginServiceImpl;
 import main.service.user.UserServiceImpl;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -33,22 +35,29 @@ public class ApiAuthController {
 
 
   @GetMapping("/check")
-  private CheckLoginResponse check(Principal principal) {
+  public CheckLoginResponse check(Principal principal) {
     return loginService.getCheckResponse(principal);
   }
 
   @PostMapping(path = "/login", consumes = MediaType.APPLICATION_JSON_VALUE)
-  private CheckLoginResponse login(@RequestBody Map<String, String> loginRequest) {
+  public CheckLoginResponse login(@RequestBody Map<String, String> loginRequest) {
     return loginService.getLoginResponse(loginRequest);
   }
 
   @GetMapping("/captcha")
-  private CaptchaResponse getCaptcha() {
+  public CaptchaResponse getCaptcha() {
     return captchaService.getNewCaptcha();
   }
 
   @PostMapping(path = "/register", consumes = MediaType.APPLICATION_JSON_VALUE)
-  private RegisterResponse register(@RequestBody Map<String, String> registerRequest) {
+  public RegisterResponse register(@RequestBody Map<String, String> registerRequest) {
     return userService.addUser(registerRequest);
+  }
+
+  @PostMapping(path = "/restore", consumes = MediaType.APPLICATION_JSON_VALUE)
+  public ResponseEntity<?> restore(@RequestBody Map<String, String> restoreRequest) {
+    return new ResponseEntity<>(
+        userService.restoreUser(restoreRequest.get("email")),
+        HttpStatus.OK);
   }
 }
