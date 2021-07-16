@@ -2,6 +2,7 @@ package main.controller;
 
 import java.security.Principal;
 import java.util.Map;
+import main.api.request.RestoreRequest;
 import main.api.response.CaptchaResponse;
 import main.api.response.CheckLoginResponse;
 import main.api.response.RegisterResponse;
@@ -57,7 +58,12 @@ public class ApiAuthController {
   @PostMapping(path = "/restore", consumes = MediaType.APPLICATION_JSON_VALUE)
   public ResponseEntity<?> restore(@RequestBody Map<String, String> restoreRequest) {
     return new ResponseEntity<>(
-        userService.restoreUser(restoreRequest.get("email")),
+        userService.sendRestoreRequestUser(restoreRequest.get("email")),
         HttpStatus.OK);
+  }
+
+  @PostMapping(path = "/password", consumes = MediaType.APPLICATION_JSON_VALUE)
+  public ResponseEntity<?> restore(@RequestBody RestoreRequest request) {
+    return new ResponseEntity<>(userService.restoreUser(request), HttpStatus.OK);
   }
 }

@@ -1,6 +1,7 @@
 package main.service.user;
 
 import java.util.Map;
+import main.api.request.RestoreRequest;
 import main.api.response.RegisterResponse;
 import main.api.response.RestoreResponse;
 import org.springframework.http.ResponseEntity;
@@ -11,5 +12,7 @@ public interface UserService {
 
   ResponseEntity<?> editUser(Map<String, String> editRequest);
 
-  RestoreResponse restoreUser(String email);
+  RestoreResponse sendRestoreRequestUser(String email);
+
+  RestoreResponse restoreUser(RestoreRequest request);
 }

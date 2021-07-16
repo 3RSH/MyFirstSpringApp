@@ -53,8 +53,15 @@ public class LoginServiceImpl implements LoginService {
 
     UserDetails userDetails = (UserDetails) auth.getPrincipal();
 
+    user = usersRepository.findFirstByEmail(userDetails.getUsername());
+
+    if (user.getCode() != null) {
+      user.setCode(null);
+      usersRepository.saveAndFlush(user);
+    }
+
     return
-        getCheckLoginResponse(usersRepository.findFirstByEmail(userDetails.getUsername()));
+        getCheckLoginResponse(user);
   }
 
   @Override
