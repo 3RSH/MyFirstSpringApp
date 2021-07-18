@@ -2,6 +2,9 @@ package main.service.posts;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.security.Principal;
 import java.sql.Timestamp;
 import java.util.ArrayList;
@@ -100,8 +103,7 @@ public class PostsServiceImpl implements PostsService {
   }
 
   @Override
-  public PostPreviewResponse getMyPostsPreview(
-      int offset, int limit, String status) {
+  public PostPreviewResponse getMyPostsPreview(int offset, int limit, String status) {
     Pageable page = PageRequest.of(offset / limit, limit);
     int userId = usersRepository.findFirstByEmail(
         SecurityContextHolder.getContext().getAuthentication().getName()).
@@ -268,8 +270,7 @@ public class PostsServiceImpl implements PostsService {
 
   @Override
   public PostEditResponse editPost(
-      int id, long timestamp, short active, String title,
-      List<String> tags, String text) {
+      int id, long timestamp, short active, String title, List<String> tags, String text) {
 
     PostEditResponse editResponse = new PostEditResponse();
     Post post = postsRepository.findPostsById(id);
@@ -418,6 +419,26 @@ public class PostsServiceImpl implements PostsService {
     return new ResponseEntity<>(getStatistics(posts), HttpStatus.OK);
   }
 
+  @Override
+  public PostPreviewResponse getModeratedPostsPreview(int offset, int limit, String status) {
+    Pageable page = PageRequest.of(offset / limit, limit);
+    int moderatorId = usersRepository.findFirstByEmail(
+        SecurityContextHolder.getContext().getAuthentication().getName()).
+        getId();
+
+    switch (status) {
+      case ("declined"):
+        return getPostPreviewResponse(
+            postsRepository.findDeclinedPostsByModerator(moderatorId, page));
+
+      case ("accepted"):
+        return getPostPreviewResponse(
+            postsRepository.findAcceptedPostsByModerator(moderatorId, page));
+
+      default:
+        return getPostPreviewResponse(postsRepository.findNewModeratedPosts(page));
+    }
+  }
 
   private StatisticsResponse getStatistics(List<Post> posts) {
     StatisticsResponse response = new StatisticsResponse();
@@ -474,10 +495,14 @@ public class PostsServiceImpl implements PostsService {
 
     copyFiles(tempPaths, paths);
 
-    try {
-      FileUtils.cleanDirectory(new File("target/classes/static/upload"));
-    } catch (IOException e) {
-      e.printStackTrace();
+    Path uploadPath = Paths.get("target/classes/static/upload");
+
+    if (Files.exists(uploadPath)) {
+      try {
+        FileUtils.cleanDirectory(uploadPath.toFile());
+      } catch (IOException e) {
+        e.printStackTrace();
+      }
     }
 
     updateFiles(post, paths);

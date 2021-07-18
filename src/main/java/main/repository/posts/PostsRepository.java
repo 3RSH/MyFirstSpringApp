@@ -142,4 +142,27 @@ public interface PostsRepository extends JpaRepository<Post, Integer> {
       "WHERE p.isActive = 1 " +
       "AND p.moderationStatus = 'NEW'")
   int getPendingPostsCount();
+
+  @Query("SELECT p " +
+      "FROM Post p " +
+      "WHERE p.isActive = 1 " +
+      "AND p.moderationStatus = 'NEW' " +
+      "ORDER BY p.time DESC")
+  Page<Post> findNewModeratedPosts(Pageable pageable);
+
+  @Query("SELECT p " +
+      "FROM Post p " +
+      "WHERE p.isActive = 1 " +
+      "AND p.moderationStatus = 'DECLINED' " +
+      "AND p.moderator.id = ?1 " +
+      "ORDER BY p.time DESC")
+  Page<Post> findDeclinedPostsByModerator(int moderatorId, Pageable pageable);
+
+  @Query("SELECT p " +
+      "FROM Post p " +
+      "WHERE p.isActive = 1 " +
+      "AND p.moderationStatus = 'ACCEPTED' " +
+      "AND p.moderator.id = ?1 " +
+      "ORDER BY p.time DESC")
+  Page<Post> findAcceptedPostsByModerator(int moderatorId, Pageable pageable);
 }

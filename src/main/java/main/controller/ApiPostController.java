@@ -117,7 +117,6 @@ public class ApiPostController {
         editPostRequest.getText());
   }
 
-
   @PostMapping(path = "/like", consumes = MediaType.APPLICATION_JSON_VALUE)
   @PreAuthorize("hasAuthority('use')")
   public VoteResponse addLike(@RequestBody AddVoteRequest voteRequest) {
@@ -128,5 +127,15 @@ public class ApiPostController {
   @PreAuthorize("hasAuthority('use')")
   public VoteResponse addDislike(@RequestBody AddVoteRequest voteRequest) {
     return postsService.addVote(voteRequest.getPostId(), (short) -1);
+  }
+
+  @GetMapping("/moderation")
+  @PreAuthorize("hasAuthority('moderate')")
+  public PostPreviewResponse moderatedPosts(
+      @RequestParam(required = false, defaultValue = "0") int offset,
+      @RequestParam(required = false, defaultValue = "10") int limit,
+      @RequestParam(required = false, defaultValue = "new") String status) {
+
+    return postsService.getModeratedPostsPreview(offset, limit, status);
   }
 }

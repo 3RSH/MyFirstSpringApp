@@ -37,4 +37,6 @@ public interface PostsService {
   StatisticsResponse getMyStatistics();
 
   ResponseEntity<?> getAllStatistics();
+
+  PostPreviewResponse getModeratedPostsPreview(int offset, int limit, String mode);
 }
