@@ -15,6 +15,7 @@ import main.service.posts.PostsServiceImpl;
 import main.service.settings.SettingsServiceImpl;
 import main.service.tags.TagsServiceImpl;
 import main.service.user.UserServiceImpl;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -137,5 +138,11 @@ public class ApiGeneralController {
     request.put("photo", String.valueOf(responseEntity.getBody()));
 
     return userService.editUser(request);
+  }
+
+  @PostMapping(value = "/moderation", consumes = MediaType.APPLICATION_JSON_VALUE)
+  @PreAuthorize("hasAuthority('moderate')")
+  public ResponseEntity<?> moderatePost(@RequestBody Map<String, String> moderateRequest) {
+    return new ResponseEntity<>(postsService.moderatePost(moderateRequest), HttpStatus.OK);
   }
 }

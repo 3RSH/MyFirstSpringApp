@@ -2,6 +2,7 @@ package main.service.posts;
 
 import java.security.Principal;
 import java.util.List;
+import java.util.Map;
 import main.api.response.PostEditResponse;
 import main.api.response.PostPreviewResponse;
 import main.api.response.PostResponse;
@@ -39,4 +40,6 @@ public interface PostsService {
   ResponseEntity<?> getAllStatistics();
 
   PostPreviewResponse getModeratedPostsPreview(int offset, int limit, String mode);
+
+  PostEditResponse moderatePost(Map<String, String> moderateRequest);
 }

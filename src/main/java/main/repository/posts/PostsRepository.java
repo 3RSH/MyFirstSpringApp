@@ -96,7 +96,7 @@ public interface PostsRepository extends JpaRepository<Post, Integer> {
   @Query("SELECT p " +
       "FROM Post p " +
       "WHERE p.id = ?1")
-  Post findPostsById(int id);
+  Post findPostById(int id);
 
   @Query("SELECT p " +
       "FROM Post p " +

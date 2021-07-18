@@ -10,6 +10,7 @@ import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -156,7 +157,7 @@ public class PostsServiceImpl implements PostsService {
 
   @Override
   public PostResponse getPostById(int id) {
-    Post post = postsRepository.findPostsById(id);
+    Post post = postsRepository.findPostById(id);
     PostResponse postResponse = new PostResponse();
 
     if (post == null ||
@@ -218,7 +219,7 @@ public class PostsServiceImpl implements PostsService {
   }
 
   @Override
-  public PostEditResponse addPost(
+  public synchronized PostEditResponse addPost(
       long timestamp, short active, String title,
       List<String> tags, String text, Principal principal) {
 
@@ -269,11 +270,11 @@ public class PostsServiceImpl implements PostsService {
   }
 
   @Override
-  public PostEditResponse editPost(
+  public synchronized PostEditResponse editPost(
       int id, long timestamp, short active, String title, List<String> tags, String text) {
 
     PostEditResponse editResponse = new PostEditResponse();
-    Post post = postsRepository.findPostsById(id);
+    Post post = postsRepository.findPostById(id);
 
     if (userHasNotRightToEdit(post)) {
       return editResponse;
@@ -310,10 +311,10 @@ public class PostsServiceImpl implements PostsService {
   }
 
   @Override
-  public ResponseEntity<?> addComment(
+  public synchronized ResponseEntity<?> addComment(
       int parentId, int postId, String text, Principal principal) {
 
-    Post post = postsRepository.findPostsById(postId);
+    Post post = postsRepository.findPostById(postId);
 
     if ((post == null) || (!post.getModerationStatus().equals(ModerationStatusType.ACCEPTED)) ||
         (parentId != 0 &&
@@ -359,16 +360,16 @@ public class PostsServiceImpl implements PostsService {
   }
 
   @Override
-  public VoteResponse addVote(int postId, short voteValue) {
+  public synchronized VoteResponse addVote(int postId, short voteValue) {
     VoteResponse response = new VoteResponse();
     User user = getCurrentUser();
-    Post post = postsRepository.findPostsById(postId);
+    Post post = postsRepository.findPostById(postId);
 
     if (!post.getModerationStatus().equals(ModerationStatusType.ACCEPTED)) {
       return response;
     }
 
-    if (post.getUser().equals(user)) {
+    if (isOwner(post) || isModerator()) {
       return response;
     }
 
@@ -422,9 +423,7 @@ public class PostsServiceImpl implements PostsService {
   @Override
   public PostPreviewResponse getModeratedPostsPreview(int offset, int limit, String status) {
     Pageable page = PageRequest.of(offset / limit, limit);
-    int moderatorId = usersRepository.findFirstByEmail(
-        SecurityContextHolder.getContext().getAuthentication().getName()).
-        getId();
+    int moderatorId = getCurrentUser().getId();
 
     switch (status) {
       case ("declined"):
@@ -439,6 +438,32 @@ public class PostsServiceImpl implements PostsService {
         return getPostPreviewResponse(postsRepository.findNewModeratedPosts(page));
     }
   }
+
+  @Override
+  public synchronized PostEditResponse moderatePost(Map<String, String> moderateRequest) {
+    PostEditResponse response = new PostEditResponse();
+
+    Post post = postsRepository.findPostById(Integer.parseInt(moderateRequest.get("post_id")));
+
+    if (post == null) {
+      response.setResult(false);
+      return response;
+    }
+
+    String decision = moderateRequest.get("decision");
+
+    if (decision.equals("accept")) {
+      post.setModerationStatus(ModerationStatusType.ACCEPTED);
+    } else {
+      post.setModerationStatus(ModerationStatusType.DECLINED);
+    }
+
+    post.setModerator(getCurrentUser());
+    postsRepository.saveAndFlush(post);
+
+    return response;
+  }
+
 
   private StatisticsResponse getStatistics(List<Post> posts) {
     StatisticsResponse response = new StatisticsResponse();
@@ -466,7 +491,7 @@ public class PostsServiceImpl implements PostsService {
   }
 
   private void updateModerationStatus(Post post) {
-    if (isOwner(post)) {
+    if (isOwner(post) || isModerator()) {
       post.setModerationStatus(ModerationStatusType.NEW);
       post.setComments(new ArrayList<>());
       post.setViewCount(0);
