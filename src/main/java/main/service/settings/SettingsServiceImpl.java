@@ -1,6 +1,7 @@
 package main.service.settings;
 
 import java.util.List;
+import java.util.Map;
 import main.api.response.SettingsResponse;
 import main.model.GlobalSetting;
 import main.repository.settings.SettingsRepository;
@@ -41,5 +42,26 @@ public class SettingsServiceImpl implements SettingsService {
     }
 
     return settings;
+  }
+
+  @Override
+  public synchronized void setGlobalSettings(Map<String, Boolean> settings) {
+
+    for (String key : settings.keySet()) {
+      GlobalSetting setting = repository.findFirstByCodeContaining(key);
+
+      if (setting != null) {
+        setting.setValue(settings.get(key) ? "YES" : "NO");
+        repository.save(setting);
+      }
+    }
+
+    repository.flush();
+  }
+
+  @Override
+  public boolean getSetting(String code) {
+    GlobalSetting setting = repository.findFirstByCodeContaining(code);
+    return setting != null && setting.getValue().equals("YES");
   }
 }

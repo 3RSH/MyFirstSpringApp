@@ -8,6 +8,7 @@ import main.api.response.PostPreviewResponse;
 import main.api.response.PostResponse;
 import main.api.response.VoteResponse;
 import main.service.posts.PostsServiceImpl;
+import main.service.settings.SettingsServiceImpl;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -26,10 +27,12 @@ import org.springframework.web.bind.annotation.RestController;
 public class ApiPostController {
 
   private final PostsServiceImpl postsService;
+  private final SettingsServiceImpl settingsService;
 
 
-  public ApiPostController(PostsServiceImpl postsService) {
+  public ApiPostController(PostsServiceImpl postsService, SettingsServiceImpl settingsService) {
     this.postsService = postsService;
+    this.settingsService = settingsService;
   }
 
 
@@ -91,8 +94,7 @@ public class ApiPostController {
   @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
   @PreAuthorize("hasAuthority('use')")
   public PostEditResponse addPost(
-      @RequestBody AddPostRequest addPostRequest,
-      Principal principal) {
+      @RequestBody AddPostRequest addPostRequest, Principal principal) {
 
     return postsService.addPost(
         addPostRequest.getTimestamp(),
@@ -100,7 +102,7 @@ public class ApiPostController {
         addPostRequest.getTitle(),
         addPostRequest.getTags(),
         addPostRequest.getText(),
-        principal);
+        principal, settingsService.getSetting("POST_PREMODERATION"));
   }
 
   @PutMapping(path = "/{ID}", consumes = MediaType.APPLICATION_JSON_VALUE)
@@ -114,7 +116,8 @@ public class ApiPostController {
         editPostRequest.getActive(),
         editPostRequest.getTitle(),
         editPostRequest.getTags(),
-        editPostRequest.getText());
+        editPostRequest.getText(),
+        settingsService.getSetting("POST_PREMODERATION"));
   }
 
   @PostMapping(path = "/like", consumes = MediaType.APPLICATION_JSON_VALUE)

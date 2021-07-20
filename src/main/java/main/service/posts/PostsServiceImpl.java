@@ -26,7 +26,6 @@ import main.api.response.PostPreviewResponse;
 import main.api.response.PostResponse;
 import main.api.response.StatisticsResponse;
 import main.api.response.VoteResponse;
-import main.model.GlobalSetting;
 import main.model.Post;
 import main.model.Post.ModerationStatusType;
 import main.model.PostComment;
@@ -36,7 +35,6 @@ import main.model.User;
 import main.model.Vote;
 import main.repository.comments.CommentsRepository;
 import main.repository.posts.PostsRepository;
-import main.repository.settings.SettingsRepository;
 import main.repository.tags.TagBindingsRepository;
 import main.repository.tags.TagsRepository;
 import main.repository.users.UsersRepository;
@@ -63,7 +61,6 @@ public class PostsServiceImpl implements PostsService {
   private final TagsRepository tagsRepository;
   private final TagBindingsRepository tagBindingsRepository;
   private final CommentsRepository commentsRepository;
-  private final SettingsRepository settingsRepository;
 
 
   public PostsServiceImpl(
@@ -72,15 +69,13 @@ public class PostsServiceImpl implements PostsService {
       @Qualifier("UsersRepository") UsersRepository usersRepository,
       @Qualifier("TagsRepository") TagsRepository tagsRepository,
       @Qualifier("TagBindingsRepository") TagBindingsRepository tagBindingsRepository,
-      @Qualifier("CommentsRepository") CommentsRepository commentsRepository,
-      @Qualifier("SettingsRepository") SettingsRepository settingsRepository) {
+      @Qualifier("CommentsRepository") CommentsRepository commentsRepository) {
     this.votesRepository = votesRepository;
     this.postsRepository = postsRepository;
     this.usersRepository = usersRepository;
     this.tagsRepository = tagsRepository;
     this.tagBindingsRepository = tagBindingsRepository;
     this.commentsRepository = commentsRepository;
-    this.settingsRepository = settingsRepository;
   }
 
 
@@ -220,8 +215,8 @@ public class PostsServiceImpl implements PostsService {
 
   @Override
   public synchronized PostEditResponse addPost(
-      long timestamp, short active, String title,
-      List<String> tags, String text, Principal principal) {
+      long timestamp, short active, String title, List<String> tags,
+      String text, Principal principal, boolean premoderationMode) {
 
     PostEditResponse creationResponse = new PostEditResponse();
     PostErrors creationErrors = getErrors(title, text, creationResponse);
@@ -251,6 +246,8 @@ public class PostsServiceImpl implements PostsService {
 
     post.setText(text);
 
+    updateModerationStatus(post, premoderationMode);
+
     postsRepository.saveAndFlush(post);
 
     for (String tagName : tags) {
@@ -271,7 +268,8 @@ public class PostsServiceImpl implements PostsService {
 
   @Override
   public synchronized PostEditResponse editPost(
-      int id, long timestamp, short active, String title, List<String> tags, String text) {
+      int id, long timestamp, short active, String title,
+      List<String> tags, String text, boolean premoderationMode) {
 
     PostEditResponse editResponse = new PostEditResponse();
     Post post = postsRepository.findPostById(id);
@@ -300,8 +298,11 @@ public class PostsServiceImpl implements PostsService {
     text = uploadingImages(text, post);
 
     post.setText(text);
+    votesRepository.deleteAll(votesRepository.findAllByPost(post));
+    post.setComments(new ArrayList<>());
+    post.setViewCount(0);
 
-    updateModerationStatus(post);
+    updateModerationStatus(post, premoderationMode);
 
     postsRepository.saveAndFlush(post);
     votesRepository.flush();
@@ -407,17 +408,14 @@ public class PostsServiceImpl implements PostsService {
   }
 
   @Override
-  public ResponseEntity<?> getAllStatistics() {
-    GlobalSetting statisticsSetting =
-        settingsRepository.findFirstByCodeContaining("STATISTICS_IS_PUBLIC");
+  public StatisticsResponse getAllStatistics(boolean statisticMode) {
 
-    if (statisticsSetting.getValue().equals("NO") && !isModerator()) {
-      return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
+    if (statisticMode || isModerator()) {
+      List<Post> posts = postsRepository.findAll();
+      return getStatistics(posts);
     }
 
-    List<Post> posts = postsRepository.findAll();
-
-    return new ResponseEntity<>(getStatistics(posts), HttpStatus.OK);
+    return new StatisticsResponse();
   }
 
   @Override
@@ -490,13 +488,12 @@ public class PostsServiceImpl implements PostsService {
     return response;
   }
 
-  private void updateModerationStatus(Post post) {
-    if (isOwner(post) || isModerator()) {
-      post.setModerationStatus(ModerationStatusType.NEW);
-      post.setComments(new ArrayList<>());
-      post.setViewCount(0);
+  private void updateModerationStatus(Post post, boolean premoderationMode) {
 
-      votesRepository.deleteAll(votesRepository.findAllByPost(post));
+    if ((!premoderationMode || isModerator()) && post.getIsActive() == 1) {
+      post.setModerationStatus(ModerationStatusType.ACCEPTED);
+    } else {
+      post.setModerationStatus(ModerationStatusType.NEW);
     }
   }
 

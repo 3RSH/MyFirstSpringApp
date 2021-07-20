@@ -237,7 +237,7 @@ public class UserServiceImpl implements UserService {
       message.addRecipient(RecipientType.TO, new InternetAddress(email));
       message.setSubject("Восстановление пароля");
 
-      String link = "<http://localhost:8080/login/change-password/" + hash;
+      String link = "http://localhost:8080/login/change-password/" + hash;
 
       String text = "Для смены пароля перейдите по ссылке:\n"
           + "<a href=\"" + link + "\">" + link + "</a>";

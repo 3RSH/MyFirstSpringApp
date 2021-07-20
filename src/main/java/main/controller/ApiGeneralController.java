@@ -21,6 +21,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -105,7 +106,12 @@ public class ApiGeneralController {
 
   @GetMapping("/statistics/all")
   public ResponseEntity<?> allStatistics() {
-    return postsService.getAllStatistics();
+    StatisticsResponse response
+        = postsService.getAllStatistics(settingsService.getSetting("STATISTICS_IS_PUBLIC"));
+
+    return response.getPostsCount() != 0
+        ? new ResponseEntity<>(response, HttpStatus.OK)
+        : new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
   }
 
   @PostMapping(value = "/profile/my", consumes = MediaType.APPLICATION_JSON_VALUE)
@@ -144,5 +150,13 @@ public class ApiGeneralController {
   @PreAuthorize("hasAuthority('moderate')")
   public ResponseEntity<?> moderatePost(@RequestBody Map<String, String> moderateRequest) {
     return new ResponseEntity<>(postsService.moderatePost(moderateRequest), HttpStatus.OK);
+  }
+
+  @PutMapping(value = "/settings", consumes = MediaType.APPLICATION_JSON_VALUE)
+  @PreAuthorize("hasAuthority('moderate')")
+  public ResponseEntity<?> setSettings(@RequestBody Map<String, Boolean> settingsRequest) {
+    settingsService.setGlobalSettings(settingsRequest);
+
+    return new ResponseEntity<>(HttpStatus.OK);
   }
 }

@@ -44,7 +44,7 @@ public class Post {
   @Enumerated(EnumType.STRING)
   @Getter
   @Setter
-  private ModerationStatusType moderationStatus = ModerationStatusType.NEW;
+  private ModerationStatusType moderationStatus;
 
   @OneToOne
   @JoinColumn(name = "moderator_id")

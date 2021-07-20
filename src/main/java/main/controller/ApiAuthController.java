@@ -5,9 +5,9 @@ import java.util.Map;
 import main.api.request.RestoreRequest;
 import main.api.response.CaptchaResponse;
 import main.api.response.CheckLoginResponse;
-import main.api.response.RegisterResponse;
 import main.service.captcha.CaptchaServiceImpl;
 import main.service.login.LoginServiceImpl;
+import main.service.settings.SettingsServiceImpl;
 import main.service.user.UserServiceImpl;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -25,13 +25,15 @@ public class ApiAuthController {
   private final CaptchaServiceImpl captchaService;
   private final UserServiceImpl userService;
   private final LoginServiceImpl loginService;
+  private final SettingsServiceImpl settingsService;
 
 
-  public ApiAuthController(CaptchaServiceImpl captchaService,
-      UserServiceImpl userService, LoginServiceImpl loginService) {
+  public ApiAuthController(CaptchaServiceImpl captchaService, UserServiceImpl userService,
+      LoginServiceImpl loginService, SettingsServiceImpl settingsService) {
     this.captchaService = captchaService;
     this.userService = userService;
     this.loginService = loginService;
+    this.settingsService = settingsService;
   }
 
 
@@ -51,8 +53,10 @@ public class ApiAuthController {
   }
 
   @PostMapping(path = "/register", consumes = MediaType.APPLICATION_JSON_VALUE)
-  public RegisterResponse register(@RequestBody Map<String, String> registerRequest) {
-    return userService.addUser(registerRequest);
+  public ResponseEntity<?> register(@RequestBody Map<String, String> registerRequest) {
+    return settingsService.getSetting("MULTIUSER_MODE")
+        ? new ResponseEntity<>(userService.addUser(registerRequest), HttpStatus.OK)
+        : new ResponseEntity<>(HttpStatus.NOT_FOUND);
   }
 
   @PostMapping(path = "/restore", consumes = MediaType.APPLICATION_JSON_VALUE)

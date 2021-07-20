@@ -26,10 +26,11 @@ public interface PostsService {
 
   PostEditResponse addPost(
       long timestamp, short active, String title,
-      List<String> tags, String text, Principal principal);
+      List<String> tags, String text, Principal principal, boolean premoderationMode);
 
   PostEditResponse editPost(
-      int id, long timestamp, short active, String title, List<String> tags, String text);
+      int id, long timestamp, short active, String title,
+      List<String> tags, String text, boolean premoderationMode);
 
   ResponseEntity<?> addComment(int parentId, int postId, String text, Principal principal);
 
@@ -37,7 +38,7 @@ public interface PostsService {
 
   StatisticsResponse getMyStatistics();
 
-  ResponseEntity<?> getAllStatistics();
+  StatisticsResponse getAllStatistics(boolean statisticMode);
 
   PostPreviewResponse getModeratedPostsPreview(int offset, int limit, String mode);
 
