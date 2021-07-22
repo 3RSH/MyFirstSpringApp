@@ -26,6 +26,10 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/post")
 public class ApiPostController {
 
+  private static final int NULL_ID = 0;
+  private static final short LIKE_VOTE = 1;
+  private static final short DISLIKE_VOTE = -1;
+
   private final PostsServiceImpl postsService;
   private final SettingsServiceImpl settingsService;
 
@@ -76,7 +80,7 @@ public class ApiPostController {
   public ResponseEntity<PostResponse> getPostById(@PathVariable("ID") int id) {
     PostResponse postResponse = postsService.getPostById(id);
 
-    return postResponse.getId() != 0
+    return postResponse.getId() != NULL_ID
         ? new ResponseEntity<>(postResponse, HttpStatus.OK)
         : ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
   }
@@ -123,13 +127,13 @@ public class ApiPostController {
   @PostMapping(path = "/like", consumes = MediaType.APPLICATION_JSON_VALUE)
   @PreAuthorize("hasAuthority('use')")
   public VoteResponse addLike(@RequestBody AddVoteRequest voteRequest) {
-    return postsService.addVote(voteRequest.getPostId(), (short) 1);
+    return postsService.addVote(voteRequest.getPostId(), LIKE_VOTE);
   }
 
   @PostMapping(path = "/dislike", consumes = MediaType.APPLICATION_JSON_VALUE)
   @PreAuthorize("hasAuthority('use')")
   public VoteResponse addDislike(@RequestBody AddVoteRequest voteRequest) {
-    return postsService.addVote(voteRequest.getPostId(), (short) -1);
+    return postsService.addVote(voteRequest.getPostId(), DISLIKE_VOTE);
   }
 
   @GetMapping("/moderation")

@@ -20,6 +20,9 @@ import org.springframework.stereotype.Service;
 @Service
 public class LoginServiceImpl implements LoginService {
 
+  private static final int MODERATOR_MARKER = 1;
+  private static final int PASS_CRYPT_STRENGTH = 12;
+
   private final UsersRepository usersRepository;
   private final PostsRepository postsRepository;
   private final AuthenticationManager authenticationManager;
@@ -83,7 +86,7 @@ public class LoginServiceImpl implements LoginService {
     userResponse.setPhoto(user.getPhoto());
     userResponse.setEmail(user.getEmail());
 
-    if (user.getIsModerator() == 1) {
+    if (user.getIsModerator() == MODERATOR_MARKER) {
       userResponse.setModeration(true);
       userResponse.setSetting(true);
       userResponse.setModerationCount(postsRepository.getPendingPostsCount());
@@ -98,6 +101,6 @@ public class LoginServiceImpl implements LoginService {
   }
 
   private PasswordEncoder passwordEncoder() {
-    return new BCryptPasswordEncoder(12);
+    return new BCryptPasswordEncoder(PASS_CRYPT_STRENGTH);
   }
 }

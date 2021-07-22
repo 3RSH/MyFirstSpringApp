@@ -15,6 +15,9 @@ import org.springframework.stereotype.Service;
 @Service
 public class CalendarServiceImpl implements CalendarService {
 
+  private static final int CURRENT_YEAR_MARKER = 0;
+  private static final int INCREMENT_VALUE = 1;
+
   private final SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
   private final PostsRepository postsRepository;
 
@@ -26,7 +29,7 @@ public class CalendarServiceImpl implements CalendarService {
 
   @Override
   public CalendarResponse getCalendar(int year) {
-    if (year == 0) {
+    if (year == CURRENT_YEAR_MARKER) {
       year = LocalDate.now().getYear();
     }
 
@@ -45,9 +48,9 @@ public class CalendarServiceImpl implements CalendarService {
         String postDate = format.format(time.getTime());
 
         if (postDateCount.containsKey(postDate)) {
-          postDateCount.replace(postDate, postDateCount.get(postDate) + 1);
+          postDateCount.replace(postDate, postDateCount.get(postDate) + INCREMENT_VALUE);
         } else {
-          postDateCount.put(postDate, 1);
+          postDateCount.put(postDate, INCREMENT_VALUE);
         }
       }
     }

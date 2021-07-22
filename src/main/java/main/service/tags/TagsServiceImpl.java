@@ -17,6 +17,11 @@ import org.springframework.stereotype.Service;
 @Service
 public class TagsServiceImpl implements TagsService {
 
+  private static final short ACTIVE_POST_MARKER = 1;
+  private static final int FULL_PERCENT = 100;
+  private static final int WEIGHT_INCREMENT = 1;
+  private static final float WEIGHT_ROUND_FACTOR = 0.5F;
+
   private final TagsRepository tagsRepository;
   private final TagBindingsRepository tagBindingsRepository;
   private final PostsRepository postsRepository;
@@ -78,7 +83,7 @@ public class TagsServiceImpl implements TagsService {
   }
 
   private boolean isAvailable(Post post) {
-    return post.getIsActive() == 1
+    return post.getIsActive() == ACTIVE_POST_MARKER
         && post.getModerationStatus() == ModerationStatusType.ACCEPTED
         && post.getTime().getTime() <= System.currentTimeMillis();
   }
@@ -111,10 +116,10 @@ public class TagsServiceImpl implements TagsService {
     List<Float> weights = new ArrayList<>();
 
     for (Float dWeight : dWeights) {
-      float weight = dWeight * factor * 100;
-      weight = (float) (int) ((weight - (int) weight) >= 0.5F
-          ? weight + 1
-          : weight) / 100;
+      float weight = dWeight * factor * FULL_PERCENT;
+      weight = (float) (int) ((weight - (int) weight) >= WEIGHT_ROUND_FACTOR
+          ? weight + WEIGHT_INCREMENT
+          : weight) / FULL_PERCENT;
 
       weights.add(weight);
     }

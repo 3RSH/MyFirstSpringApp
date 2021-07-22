@@ -53,6 +53,9 @@ public class UserServiceImpl implements UserService {
   private static final String LINK_ERROR_MESSAGE = "Ссылка для восстановления пароля устарела. "
       + "<a href=\"/login/restore-password\">Запросить ссылку снова</a>";
 
+  private static final short NOT_MODERATOR_MARKER = -1;
+  private static final int MIN_PASSWORD_SIZE = 6;
+
   private final UsersRepository usersRepository;
   private final CaptchaRepository captchaRepository;
 
@@ -81,7 +84,7 @@ public class UserServiceImpl implements UserService {
 
     User user = new User();
 
-    user.setIsModerator((short) -1);
+    user.setIsModerator(NOT_MODERATOR_MARKER);
     user.setRegTime(Timestamp.valueOf(LocalDateTime.now()));
     user.setName(registerRequest.get("name"));
     user.setEmail(registerRequest.get("e_mail"));
@@ -185,7 +188,7 @@ public class UserServiceImpl implements UserService {
 
     String password = request.getPassword();
 
-    if (password != null && password.length() < 6) {
+    if (password != null && password.length() < MIN_PASSWORD_SIZE) {
       errors.setPassword(PASSWORD_ERROR_MESSAGE);
       response.setResult(false);
     }

@@ -23,7 +23,11 @@ import org.springframework.web.multipart.MultipartFile;
 @Service
 public class ImageServiceImpl implements ImageService {
 
-  private static final String[] symbols = {"a", "b", "c", "d", "e", "f", "g", "h", "i", "j"};
+  private static final int MAX_IMAGE_SIZE = 1_000_000;
+  private static final int MAX_AVATAR_EXTENSION = 360;
+  private static final int INCREMENT_INDEX = 1;
+
+  private static final String[] SYMBOLS = {"a", "b", "c", "d", "e", "f", "g", "h", "i", "j"};
 
   private final UsersRepository usersRepository;
   private ImageErrorsResponse errorsResponse;
@@ -66,8 +70,10 @@ public class ImageServiceImpl implements ImageService {
 
       originalImage = ImageIO.read(file.getInputStream());
 
-      if ((originalImage.getWidth() > 360) || (originalImage.getHeight() > 360)) {
-        newImage = Scalr.resize(originalImage, 360);
+      if ((originalImage.getWidth() > MAX_AVATAR_EXTENSION)
+          || (originalImage.getHeight() > MAX_AVATAR_EXTENSION)) {
+
+        newImage = Scalr.resize(originalImage, MAX_AVATAR_EXTENSION);
       } else {
         newImage = originalImage;
       }
@@ -80,13 +86,14 @@ public class ImageServiceImpl implements ImageService {
       if (dir.mkdirs()) {
         if (image.createNewFile()) {
           String format = Objects.requireNonNull(file.getOriginalFilename()).
-              substring(file.getOriginalFilename().lastIndexOf(".") + 1);
+              substring(file.getOriginalFilename().lastIndexOf(".")
+                  + INCREMENT_INDEX);
 
           ImageIO.write(newImage, format, image);
         }
       }
 
-      path = image.getPath().split("static")[1];
+      path = image.getPath().split("static")[INCREMENT_INDEX];
     } catch (IOException e) {
       e.printStackTrace();
     }
@@ -115,7 +122,7 @@ public class ImageServiceImpl implements ImageService {
       return false;
     }
 
-    if (file.getSize() > 1_000_000) {
+    if (file.getSize() > MAX_IMAGE_SIZE) {
       errors.setSize("Размер файла превышает допустимый размер");
       errorsResponse.setImageErrors(errors);
       return false;
@@ -129,13 +136,15 @@ public class ImageServiceImpl implements ImageService {
         String.valueOf(Math.random()).hashCode() +
             Objects.requireNonNull(file.getOriginalFilename()).hashCode());
 
+    int index = INCREMENT_INDEX;
+
     return new File("target/classes/static/upload/" +
-        symbols[Short.parseShort(hash.substring(1, 2))] +
-        symbols[Short.parseShort(hash.substring(2, 3))] +
-        "/" + symbols[Short.parseShort(hash.substring(3, 4))] +
-        symbols[Short.parseShort(hash.substring(4, 5))] +
-        "/" + symbols[Short.parseShort(hash.substring(5, 6))] +
-        symbols[Short.parseShort(hash.substring(6, 7))]);
+        SYMBOLS[Short.parseShort(hash.substring(index, ++index))] +
+        SYMBOLS[Short.parseShort(hash.substring(index, ++index))] +
+        "/" + SYMBOLS[Short.parseShort(hash.substring(index, ++index))] +
+        SYMBOLS[Short.parseShort(hash.substring(index, ++index))] +
+        "/" + SYMBOLS[Short.parseShort(hash.substring(index, ++index))] +
+        SYMBOLS[Short.parseShort(hash.substring(index, ++index))]);
   }
 
   private String createFile(MultipartFile file, File dir) {
@@ -155,6 +164,6 @@ public class ImageServiceImpl implements ImageService {
       }
     }
 
-    return convertFile.getPath().split("static")[1];
+    return convertFile.getPath().split("static")[INCREMENT_INDEX];
   }
 }

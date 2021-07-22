@@ -21,6 +21,8 @@ import main.security.Role;
 @Table(name = "users")
 public class User {
 
+  private static final short MODERATOR_STATUS_VALUE = 1;
+
   @Id
   @SequenceGenerator(name = "usersIdSeq", sequenceName = "users_id_seq", allocationSize = 1)
   @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "usersIdSeq")
@@ -79,6 +81,8 @@ public class User {
 
 
   public Role getRole() {
-    return isModerator == 1 ? Role.MODERATOR : Role.USER;
+    return isModerator == MODERATOR_STATUS_VALUE
+        ? Role.MODERATOR
+        : Role.USER;
   }
 }

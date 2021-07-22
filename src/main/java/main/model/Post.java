@@ -76,7 +76,7 @@ public class Post {
   @Column(name = "view_count", nullable = false)
   @Getter
   @Setter
-  private int viewCount = 0;
+  private int viewCount;
 
 
   @OneToMany(mappedBy = "post", cascade = CascadeType.ALL)

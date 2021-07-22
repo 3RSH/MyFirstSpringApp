@@ -55,6 +55,23 @@ import org.springframework.stereotype.Service;
 @Service
 public class PostsServiceImpl implements PostsService {
 
+  private static final int YEAR_INDEX = 0;
+  private static final int MONTH_INDEX = 1;
+  private static final int DAY_INDEX = 2;
+  private static final int TIME_DIVIDER = 1000;
+  private static final short ACTIVE_POST_MARKER = 1;
+  private static final int DEFAULT_VALUE = 0;
+  private static final int IMAGE_PATH_OFFSET = 9;
+  private static final int FILENAME_START_INDEX = 10;
+  private static final int FILENAME_END_INDEX_OFFSET = 2;
+  private static final int PREPOST_STRING_LENGTH = 50;
+  private static final int PREPOST_STRING_COUNT = 3;
+  private static final int LIKE_VALUE = 1;
+  private static final int DISLIKE_VALUE = -1;
+  private static final int MIN_TITLE_SIZE = 3;
+  private static final int MIN_TEXT_SIZE = 50;
+  private static final int MIN_COMMENT_SIZE = 3;
+
   private final PostsRepository postsRepository;
   private final VotesRepository votesRepository;
   private final UsersRepository usersRepository;
@@ -137,9 +154,9 @@ public class PostsServiceImpl implements PostsService {
     String[] dateParams = date.split("-");
 
     return getPostPreviewResponse(postsRepository.findPostsByDate(
-        Integer.parseInt(dateParams[0]),
-        Integer.parseInt(dateParams[1]),
-        Integer.parseInt(dateParams[2]),
+        Integer.parseInt(dateParams[YEAR_INDEX]),
+        Integer.parseInt(dateParams[MONTH_INDEX]),
+        Integer.parseInt(dateParams[DAY_INDEX]),
         page));
   }
 
@@ -165,8 +182,8 @@ public class PostsServiceImpl implements PostsService {
     updateViewCount(post);
 
     postResponse.setId(post.getId());
-    postResponse.setTimestamp(post.getTime().getTime() / 1000);
-    postResponse.setActive(post.getIsActive() == 1);
+    postResponse.setTimestamp(post.getTime().getTime() / TIME_DIVIDER);
+    postResponse.setActive(post.getIsActive() == ACTIVE_POST_MARKER);
 
     UserPreview user = new UserPreview();
 
@@ -186,7 +203,7 @@ public class PostsServiceImpl implements PostsService {
       Comment comment = new Comment();
 
       comment.setId(pComment.getId());
-      comment.setTimestamp(pComment.getTime().getTime() / 1000);
+      comment.setTimestamp(pComment.getTime().getTime() / TIME_DIVIDER);
       comment.setText(pComment.getText());
 
       CommentUserPreview cUser = new CommentUserPreview();
@@ -235,9 +252,9 @@ public class PostsServiceImpl implements PostsService {
 
     long currentTime = System.currentTimeMillis();
 
-    post.setTime(timestamp < currentTime / 1000
+    post.setTime(timestamp < currentTime / TIME_DIVIDER
         ? new Timestamp(currentTime)
-        : new Timestamp(timestamp * 1000));
+        : new Timestamp(timestamp * TIME_DIVIDER));
 
     post.setTitle(title);
 
@@ -289,9 +306,9 @@ public class PostsServiceImpl implements PostsService {
 
     long currentTime = System.currentTimeMillis();
 
-    post.setTime(timestamp < currentTime / 1000
+    post.setTime(timestamp < currentTime / TIME_DIVIDER
         ? new Timestamp(currentTime)
-        : new Timestamp(timestamp * 1000));
+        : new Timestamp(timestamp * TIME_DIVIDER));
 
     post.setTitle(title);
 
@@ -300,7 +317,7 @@ public class PostsServiceImpl implements PostsService {
     post.setText(text);
     votesRepository.deleteAll(votesRepository.findAllByPost(post));
     post.setComments(new ArrayList<>());
-    post.setViewCount(0);
+    post.setViewCount(DEFAULT_VALUE);
 
     updateModerationStatus(post, premoderationMode);
 
@@ -318,7 +335,7 @@ public class PostsServiceImpl implements PostsService {
     Post post = postsRepository.findPostById(postId);
 
     if ((post == null) || (!post.getModerationStatus().equals(ModerationStatusType.ACCEPTED)) ||
-        (parentId != 0 &&
+        (parentId != DEFAULT_VALUE &&
             post.getComments().stream().noneMatch(comment -> comment.getId() == parentId))) {
 
       return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
@@ -338,7 +355,7 @@ public class PostsServiceImpl implements PostsService {
     comment.setUser(user);
     comment.setPost(post);
 
-    if (parentId != 0) {
+    if (parentId != DEFAULT_VALUE) {
       comment.setParentComment(commentsRepository.getOne(parentId));
     }
 
@@ -465,14 +482,14 @@ public class PostsServiceImpl implements PostsService {
 
   private StatisticsResponse getStatistics(List<Post> posts) {
     StatisticsResponse response = new StatisticsResponse();
-    int likesCount = 0, dislikesCount = 0, viewsCount = 0;
-    long firstPublication = System.currentTimeMillis() / 1000;
+    int likesCount = DEFAULT_VALUE, dislikesCount = DEFAULT_VALUE, viewsCount = DEFAULT_VALUE;
+    long firstPublication = System.currentTimeMillis() / TIME_DIVIDER;
 
     for (Post post : posts) {
       likesCount += getLikesCountByPostId(post.getId());
       dislikesCount += getDislikeCountByPostId(post.getId());
       viewsCount += post.getViewCount();
-      long publicationTime = post.getTime().getTime() / 1000;
+      long publicationTime = post.getTime().getTime() / TIME_DIVIDER;
 
       if (firstPublication > publicationTime) {
         firstPublication = publicationTime;
@@ -490,7 +507,7 @@ public class PostsServiceImpl implements PostsService {
 
   private void updateModerationStatus(Post post, boolean premoderationMode) {
 
-    if ((!premoderationMode || isModerator()) && post.getIsActive() == 1) {
+    if ((!premoderationMode || isModerator()) && post.getIsActive() == ACTIVE_POST_MARKER) {
       post.setModerationStatus(ModerationStatusType.ACCEPTED);
     } else {
       post.setModerationStatus(ModerationStatusType.NEW);
@@ -569,7 +586,7 @@ public class PostsServiceImpl implements PostsService {
 
   private void deleteFiles(List<String> source) {
     for (String path : source) {
-      path = path.substring(0, path.lastIndexOf("images/") + 9);
+      path = path.substring(0, path.lastIndexOf("images/") + IMAGE_PATH_OFFSET);
       File dir = new File(path);
 
       try {
@@ -603,7 +620,7 @@ public class PostsServiceImpl implements PostsService {
     for (int i = 0; i < paths.size(); i++) {
       String path = paths.get(i);
 
-      path = path.substring(10, path.length() - 2);
+      path = path.substring(FILENAME_START_INDEX, path.length() - FILENAME_END_INDEX_OFFSET);
       path = path.replaceAll("\\\\", "/");
       path = "target/classes/static" + path;
 
@@ -648,7 +665,7 @@ public class PostsServiceImpl implements PostsService {
     PostPreview postPreview = new PostPreview();
 
     postPreview.setId(post.getId());
-    postPreview.setTimestamp(post.getTime().getTime() / 1000);
+    postPreview.setTimestamp(post.getTime().getTime() / TIME_DIVIDER);
     postPreview.setUser(userPreview);
     postPreview.setTitle(post.getTitle());
     postPreview.setAnnounce(getAnnounce(post));
@@ -663,18 +680,22 @@ public class PostsServiceImpl implements PostsService {
   private String getAnnounce(Post post) {
     StringBuilder announce = new StringBuilder();
     String text = post.getText().replaceAll("<.*?>", "");
+    int prepostMaxLength = PREPOST_STRING_COUNT * PREPOST_STRING_LENGTH;
 
-    if (text.length() > 150) {
-      announce.append(text, 0, 50).append("\n")
-          .append(text, 50, 100).append("\n")
-          .append(text, 100, 150).append("...");
-    } else if (text.length() > 100) {
-      announce.append(text, 0, 50).append("\n")
-          .append(text, 50, 100).append("\n")
-          .append(text.substring(100));
-    } else if (text.length() > 50) {
-      announce.append(text, 0, 50).append("\n")
-          .append(text.substring(50));
+    if (text.length() > prepostMaxLength) {
+      for (int i = 0; i < PREPOST_STRING_COUNT; ) {
+        announce.append(text, i + PREPOST_STRING_LENGTH, ++i * PREPOST_STRING_LENGTH);
+      }
+
+      announce.append("...");
+    } else if (text.length() > prepostMaxLength - PREPOST_STRING_LENGTH) {
+      for (int i = 0; i < PREPOST_STRING_COUNT; ) {
+        announce.append(text, i + PREPOST_STRING_LENGTH, ++i * PREPOST_STRING_LENGTH);
+      }
+    } else if (text.length() > PREPOST_STRING_LENGTH) {
+      for (int i = 0; i < PREPOST_STRING_COUNT - 1; ) {
+        announce.append(text, i + PREPOST_STRING_LENGTH, ++i * PREPOST_STRING_LENGTH);
+      }
     } else {
       return text;
     }
@@ -686,7 +707,7 @@ public class PostsServiceImpl implements PostsService {
     AtomicInteger count = new AtomicInteger();
 
     votesRepository.findAll().forEach(vote -> {
-      if (vote.getPost().getId() == postId && vote.getValue() == 1) {
+      if (vote.getPost().getId() == postId && vote.getValue() == LIKE_VALUE) {
         count.getAndIncrement();
       }
     });
@@ -698,7 +719,7 @@ public class PostsServiceImpl implements PostsService {
     AtomicInteger count = new AtomicInteger();
 
     votesRepository.findAll().forEach(vote -> {
-      if (vote.getPost().getId() == postId && vote.getValue() == -1) {
+      if (vote.getPost().getId() == postId && vote.getValue() == DISLIKE_VALUE) {
         count.getAndIncrement();
       }
     });
@@ -717,12 +738,12 @@ public class PostsServiceImpl implements PostsService {
   private PostErrors getErrors(String title, String text, PostEditResponse response) {
     PostErrors errors = new PostErrors();
 
-    if (title.length() < 3) {
+    if (title.length() < MIN_TITLE_SIZE) {
       errors.setTitle("Заголовок не установлен");
       response.setResult(false);
     }
 
-    if (text.length() < 50) {
+    if (text.length() < MIN_TEXT_SIZE) {
       errors.setText("Текст публикации слишком короткий");
       response.setResult(false);
     }
@@ -733,7 +754,7 @@ public class PostsServiceImpl implements PostsService {
   private PostErrors getErrors(String text, PostEditResponse response) {
     PostErrors errors = new PostErrors();
 
-    if (text.length() < 3) {
+    if (text.length() < MIN_COMMENT_SIZE) {
       errors.setText("Текст комментария не задан или слишком короткий");
       response.setResult(false);
     }

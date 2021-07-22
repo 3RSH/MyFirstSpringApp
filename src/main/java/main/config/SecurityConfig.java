@@ -25,6 +25,8 @@ import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 @EnableGlobalMethodSecurity(prePostEnabled = true)
 public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
+  private static final int PASS_CRYPT_STRENGTH = 12;
+
   private final UserDetailsService userDetailsService;
 
 
@@ -86,6 +88,6 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
   @Bean
   protected PasswordEncoder passwordEncoder() {
-    return new BCryptPasswordEncoder(12);
+    return new BCryptPasswordEncoder(PASS_CRYPT_STRENGTH);
   }
 }
