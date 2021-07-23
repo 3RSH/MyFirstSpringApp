@@ -232,7 +232,7 @@ public class PostsServiceImpl implements PostsService {
 
   @Override
   public synchronized PostEditResponse addPost(
-      long timestamp, short active, String title, List<String> tags,
+      long timestamp, short active, String title, List<String> tagNames,
       String text, Principal principal, boolean premoderationMode) {
 
     PostEditResponse creationResponse = new PostEditResponse();
@@ -264,21 +264,8 @@ public class PostsServiceImpl implements PostsService {
     post.setText(text);
 
     updateModerationStatus(post, premoderationMode);
-
     postsRepository.saveAndFlush(post);
-
-    for (String tagName : tags) {
-      Tag tag = tagsRepository.findFirstByName(tagName.toLowerCase());
-
-      if (tag == null) {
-        tag = new Tag();
-
-        tag.setName(tagName.toLowerCase());
-        tagsRepository.saveAndFlush(tag);
-      }
-
-      tagBindingsRepository.saveAndFlush(getTagBinding(tag, post));
-    }
+    addTags(post, tagNames);
 
     return creationResponse;
   }
@@ -286,7 +273,7 @@ public class PostsServiceImpl implements PostsService {
   @Override
   public synchronized PostEditResponse editPost(
       int id, long timestamp, short active, String title,
-      List<String> tags, String text, boolean premoderationMode) {
+      List<String> tagNames, String text, boolean premoderationMode) {
 
     PostEditResponse editResponse = new PostEditResponse();
     Post post = postsRepository.findPostById(id);
@@ -323,7 +310,7 @@ public class PostsServiceImpl implements PostsService {
 
     postsRepository.saveAndFlush(post);
     votesRepository.flush();
-    updateTags(post, tags);
+    updatePostTags(post, tagNames);
 
     return editResponse;
   }
@@ -790,16 +777,46 @@ public class PostsServiceImpl implements PostsService {
     return tagBinding;
   }
 
-  private void updateTags(Post post, List<String> tags) {
+  private void addTags(Post post, List<String> tagNames) {
+    List<Tag> blogTags = tagsRepository.findAll();
+    List<Tag> newTags = new ArrayList<>();
+    List<TagBinding> newTagBindings = new ArrayList<>();
+    List<String> blogTagNames = blogTags.stream()
+        .map(Tag::getName).collect(Collectors.toList());
+
+    tagNames.forEach(t -> t = t.toLowerCase());
+
+    for (String tagName : tagNames) {
+      Tag tag = blogTags.stream().filter(t -> t.getName().equals(tagName))
+          .findFirst().orElse(new Tag());
+
+      if (!blogTagNames.contains(tagName)) {
+        tag.setName(tagName.toLowerCase());
+        newTags.add(tag);
+      }
+
+      newTagBindings.add(getTagBinding(tag, post));
+    }
+
+    tagsRepository.saveAll(newTags);
+    tagBindingsRepository.saveAll(newTagBindings);
+
+    tagsRepository.flush();
+    tagBindingsRepository.flush();
+  }
+
+  private void updatePostTags(Post post, List<String> tagNames) {
     List<String> currentTagNames =
         post.getTags().stream().map(Tag::getName).collect(Collectors.toList());
-
     List<Tag> tagsForCheck = new ArrayList<>();
+
+    List<Tag> blogTags = tagsRepository.findAll();
+    List<TagBinding> blogTagBindings = tagBindingsRepository.findAll();
 
     for (String currentTagName : currentTagNames) {
       boolean mustDeleted = true;
 
-      for (String tagName : tags) {
+      for (String tagName : tagNames) {
         if (tagName.equalsIgnoreCase(currentTagName)) {
           mustDeleted = false;
           break;
@@ -807,25 +824,30 @@ public class PostsServiceImpl implements PostsService {
       }
 
       if (mustDeleted) {
-        Tag tag = tagsRepository.findFirstByName(currentTagName);
-        TagBinding tagBinding = tagBindingsRepository.findFirstByTagAndPost(tag, post);
+        Tag tag = blogTags.stream().filter(t -> t.getName().equals(currentTagName))
+            .findFirst().orElse(null);
+        blogTagBindings.stream()
+            .filter(bind -> bind.getTag().equals(tag) && bind.getPost().equals(post))
+            .findFirst().ifPresent(tagBindingsRepository::delete);
 
-        tagBindingsRepository.delete(tagBinding);
         tagsForCheck.add(tag);
       }
     }
 
-    for (String tagName : tags) {
-      Tag tag = tagsRepository.findFirstByName(tagName.toLowerCase());
+    for (String tagName : tagNames) {
+      Tag tag = blogTags.stream().filter(t -> t.getName().equals(tagName.toLowerCase()))
+          .findFirst().orElse(null);
 
       if (tag == null) {
-        tag = new Tag();
+        Tag newTag = new Tag();
 
-        tag.setName(tagName.toLowerCase());
-        tagsRepository.save(tag);
-        tagBindingsRepository.save(getTagBinding(tag, post));
+        newTag.setName(tagName.toLowerCase());
+        tagsRepository.save(newTag);
+        tagBindingsRepository.save(getTagBinding(newTag, post));
       } else {
-        TagBinding tagBinding = tagBindingsRepository.findFirstByTagAndPost(tag, post);
+        TagBinding tagBinding = blogTagBindings.stream()
+            .filter(bind -> bind.getTag().equals(tag) && bind.getPost().equals(post))
+            .findFirst().orElse(null);
 
         if (tagBinding == null) {
           tagBindingsRepository.save(getTagBinding(tag, post));
@@ -834,9 +856,12 @@ public class PostsServiceImpl implements PostsService {
     }
 
     tagBindingsRepository.flush();
+    blogTagBindings = tagBindingsRepository.findAll();
 
     for (Tag tag : tagsForCheck) {
-      TagBinding tagBinding = tagBindingsRepository.findFirstByTag(tag);
+      TagBinding tagBinding = blogTagBindings.stream()
+          .filter(bind -> bind.getTag().equals(tag))
+          .findFirst().orElse(null);
 
       if (tagBinding == null) {
         tagsRepository.deleteByName(tag.getName());

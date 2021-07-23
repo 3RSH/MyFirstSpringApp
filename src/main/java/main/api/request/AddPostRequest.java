@@ -20,7 +20,7 @@ public class AddPostRequest {
 
   @Getter
   @Setter
-  List<String> tags;
+  List<String> tagNames;
 
   @Getter
   @Setter

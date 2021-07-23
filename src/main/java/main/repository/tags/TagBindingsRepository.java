@@ -11,7 +11,4 @@ import org.springframework.stereotype.Service;
 @Repository
 public interface TagBindingsRepository extends JpaRepository<TagBinding, Integer> {
 
-  TagBinding findFirstByTagAndPost(Tag tag, Post post);
-
-  TagBinding findFirstByTag(Tag tag);
 }

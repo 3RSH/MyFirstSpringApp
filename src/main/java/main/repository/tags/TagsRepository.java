@@ -12,8 +12,6 @@ import org.springframework.transaction.annotation.Transactional;
 @Repository
 public interface TagsRepository extends JpaRepository<Tag, Integer> {
 
-  Tag findFirstByName(String name);
-
   @Transactional
   @Modifying
   @Query("DELETE FROM Tag t " +

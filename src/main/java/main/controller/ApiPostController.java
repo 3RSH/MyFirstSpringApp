@@ -104,7 +104,7 @@ public class ApiPostController {
         addPostRequest.getTimestamp(),
         addPostRequest.getActive(),
         addPostRequest.getTitle(),
-        addPostRequest.getTags(),
+        addPostRequest.getTagNames(),
         addPostRequest.getText(),
         principal, settingsService.getSetting("POST_PREMODERATION"));
   }
@@ -119,7 +119,7 @@ public class ApiPostController {
         editPostRequest.getTimestamp(),
         editPostRequest.getActive(),
         editPostRequest.getTitle(),
-        editPostRequest.getTags(),
+        editPostRequest.getTagNames(),
         editPostRequest.getText(),
         settingsService.getSetting("POST_PREMODERATION"));
   }
