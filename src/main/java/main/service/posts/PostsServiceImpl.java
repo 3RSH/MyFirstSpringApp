@@ -235,39 +235,22 @@ public class PostsServiceImpl implements PostsService {
       long timestamp, short active, String title, List<String> tagNames,
       String text, Principal principal, boolean premoderationMode) {
 
-    PostEditResponse creationResponse = new PostEditResponse();
-    PostErrors creationErrors = getErrors(title, text, creationResponse);
-
-    if (!creationResponse.isResult()) {
-      creationResponse.setCreationErrors(creationErrors);
-      return creationResponse;
-    }
-
     Post post = new Post();
     User user = usersRepository.findFirstByEmail(principal.getName());
 
     post.setUser(user);
 
-    post.setIsActive(active);
+    PostEditResponse response = validatePostData(title, text);
 
-    long currentTime = System.currentTimeMillis();
+    if (!response.isResult()) {
+      return response;
+    }
 
-    post.setTime(timestamp < currentTime / TIME_DIVIDER
-        ? new Timestamp(currentTime)
-        : new Timestamp(timestamp * TIME_DIVIDER));
-
-    post.setTitle(title);
-
-    post.setText("");
-    text = uploadingImages(text, post);
-
-    post.setText(text);
-
-    updateModerationStatus(post, premoderationMode);
+    fillPost(post, active, timestamp, title, text, premoderationMode);
     postsRepository.saveAndFlush(post);
     addTags(post, tagNames);
 
-    return creationResponse;
+    return response;
   }
 
   @Override
@@ -275,44 +258,24 @@ public class PostsServiceImpl implements PostsService {
       int id, long timestamp, short active, String title,
       List<String> tagNames, String text, boolean premoderationMode) {
 
-    PostEditResponse editResponse = new PostEditResponse();
     Post post = postsRepository.findPostById(id);
 
     if (userHasNotRightToEdit(post)) {
-      return editResponse;
+      return new PostEditResponse();
     }
 
-    PostErrors creationErrors = getErrors(title, text, editResponse);
+    PostEditResponse response = validatePostData(title, text);
 
-    if (!editResponse.isResult()) {
-      editResponse.setCreationErrors(creationErrors);
-      return editResponse;
+    if (!response.isResult()) {
+      return response;
     }
 
-    post.setIsActive(active);
-
-    long currentTime = System.currentTimeMillis();
-
-    post.setTime(timestamp < currentTime / TIME_DIVIDER
-        ? new Timestamp(currentTime)
-        : new Timestamp(timestamp * TIME_DIVIDER));
-
-    post.setTitle(title);
-
-    text = uploadingImages(text, post);
-
-    post.setText(text);
-    votesRepository.deleteAll(votesRepository.findAllByPost(post));
-    post.setComments(new ArrayList<>());
-    post.setViewCount(DEFAULT_VALUE);
-
-    updateModerationStatus(post, premoderationMode);
-
+    fillPost(post, active, timestamp, title, text, premoderationMode);
+    clearPostSubData(post);
     postsRepository.saveAndFlush(post);
-    votesRepository.flush();
     updatePostTags(post, tagNames);
 
-    return editResponse;
+    return response;
   }
 
   @Override
@@ -329,7 +292,7 @@ public class PostsServiceImpl implements PostsService {
     }
 
     PostEditResponse creationResponse = new PostEditResponse();
-    PostErrors creationErrors = getErrors(text, creationResponse);
+    PostErrors creationErrors = getCommentErrors(text, creationResponse);
 
     if (!creationResponse.isResult()) {
       creationResponse.setCreationErrors(creationErrors);
@@ -466,6 +429,46 @@ public class PostsServiceImpl implements PostsService {
     return response;
   }
 
+
+  private PostEditResponse validatePostData(String title, String text) {
+    PostEditResponse editResponse = new PostEditResponse();
+    PostErrors creationErrors = getPostErrors(title, text, editResponse);
+
+    if (!editResponse.isResult()) {
+      editResponse.setCreationErrors(creationErrors);
+    }
+
+    return editResponse;
+  }
+
+  private void fillPost(
+      Post post, short active, long timestamp,
+      String title, String text, boolean premoderationMode) {
+
+    post.setIsActive(active);
+
+    long currentTime = System.currentTimeMillis();
+
+    post.setTime(timestamp < currentTime / TIME_DIVIDER
+        ? new Timestamp(currentTime)
+        : new Timestamp(timestamp * TIME_DIVIDER));
+
+    post.setTitle(title);
+
+    text = uploadingImages(text, post);
+
+    post.setText(text);
+
+    updateModerationStatus(post, premoderationMode);
+  }
+
+  private void clearPostSubData(Post post) {
+    votesRepository.deleteAll(votesRepository.findAllByPost(post));
+    votesRepository.flush();
+
+    post.setComments(new ArrayList<>());
+    post.setViewCount(DEFAULT_VALUE);
+  }
 
   private StatisticsResponse getStatistics(List<Post> posts) {
     StatisticsResponse response = new StatisticsResponse();
@@ -722,7 +725,7 @@ public class PostsServiceImpl implements PostsService {
     }
   }
 
-  private PostErrors getErrors(String title, String text, PostEditResponse response) {
+  private PostErrors getPostErrors(String title, String text, PostEditResponse response) {
     PostErrors errors = new PostErrors();
 
     if (title.length() < MIN_TITLE_SIZE) {
@@ -738,7 +741,7 @@ public class PostsServiceImpl implements PostsService {
     return errors;
   }
 
-  private PostErrors getErrors(String text, PostEditResponse response) {
+  private PostErrors getCommentErrors(String text, PostEditResponse response) {
     PostErrors errors = new PostErrors();
 
     if (text.length() < MIN_COMMENT_SIZE) {
