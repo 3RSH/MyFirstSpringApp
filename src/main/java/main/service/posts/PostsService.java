@@ -1,14 +1,15 @@
 package main.service.posts;
 
 import java.security.Principal;
-import java.util.List;
-import java.util.Map;
+import main.api.request.AddCommentRequest;
+import main.api.request.AddPostRequest;
+import main.api.request.AddVoteRequest;
+import main.api.request.ModerateRequest;
 import main.api.response.PostEditResponse;
 import main.api.response.PostPreviewResponse;
 import main.api.response.PostResponse;
 import main.api.response.StatisticsResponse;
 import main.api.response.VoteResponse;
-import org.springframework.http.ResponseEntity;
 
 public interface PostsService {
 
@@ -24,17 +25,13 @@ public interface PostsService {
 
   PostPreviewResponse getMyPostsPreview(int offset, int limit, String mode);
 
-  PostEditResponse addPost(
-      long timestamp, short active, String title,
-      List<String> tags, String text, Principal principal, boolean premoderationMode);
+  PostEditResponse addPost(AddPostRequest request, Principal principal, boolean premoderationMode);
 
-  PostEditResponse editPost(
-      int id, long timestamp, short active, String title,
-      List<String> tags, String text, boolean premoderationMode);
+  PostEditResponse editPost(AddPostRequest request, int id, boolean premoderationMode);
 
-  ResponseEntity<?> addComment(int parentId, int postId, String text, Principal principal);
+  PostEditResponse addComment(AddCommentRequest request, Principal principal);
 
-  VoteResponse addVote(int postId, short voteValue);
+  VoteResponse addVote(AddVoteRequest request, short voteValue);
 
   StatisticsResponse getMyStatistics();
 
@@ -42,5 +39,5 @@ public interface PostsService {
 
   PostPreviewResponse getModeratedPostsPreview(int offset, int limit, String mode);
 
-  PostEditResponse moderatePost(Map<String, String> moderateRequest);
+  PostEditResponse moderatePost(ModerateRequest request);
 }

@@ -41,108 +41,108 @@ public class ApiPostController {
 
 
   @GetMapping
-  public PostPreviewResponse posts(
+  public ResponseEntity<PostPreviewResponse> posts(
       @RequestParam(required = false, defaultValue = "0") int offset,
       @RequestParam(required = false, defaultValue = "10") int limit,
       @RequestParam(required = false, defaultValue = "recent") String mode) {
 
-    return postsService.getPostsPreview(offset, limit, mode);
+    return new ResponseEntity<>(
+        postsService.getPostsPreview(offset, limit, mode), HttpStatus.OK);
   }
 
   @GetMapping("/search")
-  public PostPreviewResponse postsByQuery(
+  public ResponseEntity<PostPreviewResponse> postsByQuery(
       @RequestParam(required = false, defaultValue = "0") int offset,
       @RequestParam(required = false, defaultValue = "10") int limit,
       @RequestParam String query) {
 
-    return postsService.getPostsPreviewByQuery(offset, limit, query);
+    return new ResponseEntity<>(
+        postsService.getPostsPreviewByQuery(offset, limit, query), HttpStatus.OK);
   }
 
   @GetMapping("/byDate")
-  public PostPreviewResponse postsByDate(
+  public ResponseEntity<PostPreviewResponse> postsByDate(
       @RequestParam(required = false, defaultValue = "0") int offset,
       @RequestParam(required = false, defaultValue = "10") int limit,
       @RequestParam String date) {
 
-    return postsService.getPostsPreviewByDate(offset, limit, date);
+    return new ResponseEntity<>(
+        postsService.getPostsPreviewByDate(offset, limit, date), HttpStatus.OK);
   }
 
   @GetMapping("/byTag")
-  public PostPreviewResponse postsByTag(
+  public ResponseEntity<PostPreviewResponse> postsByTag(
       @RequestParam(required = false, defaultValue = "0") int offset,
       @RequestParam(required = false, defaultValue = "10") int limit,
       @RequestParam String tag) {
 
-    return postsService.getPostsPreviewByTag(offset, limit, tag);
+    return new ResponseEntity<>(
+        postsService.getPostsPreviewByTag(offset, limit, tag), HttpStatus.OK);
   }
 
   @GetMapping("/{ID}")
-  public ResponseEntity<PostResponse> getPostById(@PathVariable("ID") int id) {
+  public ResponseEntity<?> getPostById(@PathVariable("ID") int id) {
     PostResponse postResponse = postsService.getPostById(id);
 
     return postResponse.getId() != NULL_ID
         ? new ResponseEntity<>(postResponse, HttpStatus.OK)
-        : ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+        : new ResponseEntity<>(HttpStatus.NOT_FOUND);
   }
 
   @GetMapping("/my")
   @PreAuthorize("hasAuthority('use')")
-  public PostPreviewResponse myPosts(
+  public ResponseEntity<PostPreviewResponse> myPosts(
       @RequestParam(required = false, defaultValue = "0") int offset,
       @RequestParam(required = false, defaultValue = "10") int limit,
       @RequestParam(required = false, defaultValue = "inactive") String status) {
 
-    return postsService.getMyPostsPreview(offset, limit, status);
+    return new ResponseEntity<>(
+        postsService.getMyPostsPreview(offset, limit, status), HttpStatus.OK);
   }
 
   @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
   @PreAuthorize("hasAuthority('use')")
-  public PostEditResponse addPost(
-      @RequestBody AddPostRequest addPostRequest, Principal principal) {
+  public ResponseEntity<PostEditResponse> addPost(
+      @RequestBody AddPostRequest request, Principal principal) {
 
-    return postsService.addPost(
-        addPostRequest.getTimestamp(),
-        addPostRequest.getActive(),
-        addPostRequest.getTitle(),
-        addPostRequest.getTagNames(),
-        addPostRequest.getText(),
-        principal, settingsService.getSetting("POST_PREMODERATION"));
+    return new ResponseEntity<>(
+        postsService.addPost(request, principal, settingsService.getSetting("POST_PREMODERATION")),
+        HttpStatus.OK);
   }
 
   @PutMapping(path = "/{ID}", consumes = MediaType.APPLICATION_JSON_VALUE)
   @PreAuthorize("hasAuthority('use')")
-  public PostEditResponse editPost(
+  public ResponseEntity<PostEditResponse> editPost(
       @PathVariable("ID") int id,
-      @RequestBody AddPostRequest editPostRequest) {
+      @RequestBody AddPostRequest request) {
 
-    return postsService.editPost(id,
-        editPostRequest.getTimestamp(),
-        editPostRequest.getActive(),
-        editPostRequest.getTitle(),
-        editPostRequest.getTagNames(),
-        editPostRequest.getText(),
-        settingsService.getSetting("POST_PREMODERATION"));
+    return new ResponseEntity<>(
+        postsService.editPost(request, id, settingsService.getSetting("POST_PREMODERATION")),
+        HttpStatus.OK);
   }
 
   @PostMapping(path = "/like", consumes = MediaType.APPLICATION_JSON_VALUE)
   @PreAuthorize("hasAuthority('use')")
-  public VoteResponse addLike(@RequestBody AddVoteRequest voteRequest) {
-    return postsService.addVote(voteRequest.getPostId(), LIKE_VOTE);
+  public ResponseEntity<VoteResponse> addLike(@RequestBody AddVoteRequest request) {
+    return new ResponseEntity<>(
+        postsService.addVote(request, LIKE_VOTE), HttpStatus.OK);
   }
 
   @PostMapping(path = "/dislike", consumes = MediaType.APPLICATION_JSON_VALUE)
   @PreAuthorize("hasAuthority('use')")
-  public VoteResponse addDislike(@RequestBody AddVoteRequest voteRequest) {
-    return postsService.addVote(voteRequest.getPostId(), DISLIKE_VOTE);
+  public ResponseEntity<VoteResponse> addDislike(@RequestBody AddVoteRequest request) {
+    return new ResponseEntity<>(
+        postsService.addVote(request, DISLIKE_VOTE), HttpStatus.OK);
   }
 
   @GetMapping("/moderation")
   @PreAuthorize("hasAuthority('moderate')")
-  public PostPreviewResponse moderatedPosts(
+  public ResponseEntity<PostPreviewResponse> moderatedPosts(
       @RequestParam(required = false, defaultValue = "0") int offset,
       @RequestParam(required = false, defaultValue = "10") int limit,
       @RequestParam(required = false, defaultValue = "new") String status) {
 
-    return postsService.getModeratedPostsPreview(offset, limit, status);
+    return new ResponseEntity<>(
+        postsService.getModeratedPostsPreview(offset, limit, status), HttpStatus.OK);
   }
 }

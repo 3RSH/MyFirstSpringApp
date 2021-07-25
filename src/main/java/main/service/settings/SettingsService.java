@@ -1,13 +1,13 @@
 package main.service.settings;
 
-import java.util.Map;
+import main.api.request.SettingsRequest;
 import main.api.response.SettingsResponse;
 
 public interface SettingsService {
 
   SettingsResponse getGlobalSettings();
 
-  void setGlobalSettings(Map<String, Boolean> settings);
+  void setGlobalSettings(SettingsRequest request);
 
   boolean getSetting(String code);
 }

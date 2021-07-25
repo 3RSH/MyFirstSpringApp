@@ -1,7 +1,7 @@
 package main.service.settings;
 
 import java.util.List;
-import java.util.Map;
+import main.api.request.SettingsRequest;
 import main.api.response.SettingsResponse;
 import main.model.GlobalSetting;
 import main.repository.settings.SettingsRepository;
@@ -45,14 +45,26 @@ public class SettingsServiceImpl implements SettingsService {
   }
 
   @Override
-  public synchronized void setGlobalSettings(Map<String, Boolean> settings) {
+  public synchronized void setGlobalSettings(SettingsRequest request) {
+    List<GlobalSetting> settings = repository.findAll();
 
-    for (String key : settings.keySet()) {
-      GlobalSetting setting = repository.findFirstByCodeContaining(key);
+    for (GlobalSetting setting : settings) {
 
-      if (setting != null) {
-        setting.setValue(settings.get(key) ? "YES" : "NO");
-        repository.save(setting);
+      switch (setting.getCode()) {
+        case ("MULTIUSER_MODE"):
+          setting.setValue(request.isMultiuserMode() ? "YES" : "NO");
+          repository.save(setting);
+          break;
+
+        case ("POST_PREMODERATION"):
+          setting.setValue(request.isPostPremoderation() ? "YES" : "NO");
+          repository.save(setting);
+          break;
+
+        case ("STATISTICS_IS_PUBLIC"):
+          setting.setValue(request.isStatisticsIsPublic() ? "YES" : "NO");
+          repository.save(setting);
+          break;
       }
     }
 

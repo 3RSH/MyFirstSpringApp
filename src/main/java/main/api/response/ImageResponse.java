@@ -7,11 +7,16 @@ import lombok.Getter;
 import lombok.Setter;
 import main.api.ImageErrors;
 
-public class ImageErrorsResponse {
+public class ImageResponse {
 
   @Getter
   @Setter
   private boolean result;
+
+  @Getter
+  @Setter
+  @JsonInclude(Include.NON_NULL)
+  private String imagePath;
 
   @Getter
   @Setter

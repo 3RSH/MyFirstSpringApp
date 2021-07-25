@@ -1,12 +1,12 @@
 package main.service.login;
 
 import java.security.Principal;
-import java.util.Map;
+import main.api.request.LoginRequest;
 import main.api.response.CheckLoginResponse;
 
 public interface LoginService {
 
-  CheckLoginResponse getLoginResponse(Map<String, String> loginRequest);
+  CheckLoginResponse getLoginResponse(LoginRequest request);
 
   CheckLoginResponse getCheckResponse(Principal principal);
 }

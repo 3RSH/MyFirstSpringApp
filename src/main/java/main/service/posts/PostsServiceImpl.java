@@ -10,7 +10,6 @@ import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -20,6 +19,10 @@ import main.api.CommentUserPreview;
 import main.api.PostErrors;
 import main.api.PostPreview;
 import main.api.UserPreview;
+import main.api.request.AddCommentRequest;
+import main.api.request.AddPostRequest;
+import main.api.request.AddVoteRequest;
+import main.api.request.ModerateRequest;
 import main.api.response.CommentResponse;
 import main.api.response.PostEditResponse;
 import main.api.response.PostPreviewResponse;
@@ -45,8 +48,6 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -232,31 +233,36 @@ public class PostsServiceImpl implements PostsService {
 
   @Override
   public synchronized PostEditResponse addPost(
-      long timestamp, short active, String title, List<String> tagNames,
-      String text, Principal principal, boolean premoderationMode) {
+      AddPostRequest request, Principal principal, boolean premoderationMode) {
 
     Post post = new Post();
     User user = usersRepository.findFirstByEmail(principal.getName());
 
     post.setUser(user);
 
-    PostEditResponse response = validatePostData(title, text);
+    PostEditResponse response = validatePostData(request.getTitle(), request.getText());
 
     if (!response.isResult()) {
       return response;
     }
 
-    fillPost(post, active, timestamp, title, text, premoderationMode);
+    fillPost(
+        post,
+        request.getActive(),
+        request.getTimestamp(),
+        request.getTitle(),
+        request.getText(),
+        premoderationMode);
+
     postsRepository.saveAndFlush(post);
-    addTags(post, tagNames);
+    addTags(post, request.getTagNames());
 
     return response;
   }
 
   @Override
   public synchronized PostEditResponse editPost(
-      int id, long timestamp, short active, String title,
-      List<String> tagNames, String text, boolean premoderationMode) {
+      AddPostRequest request, int id, boolean premoderationMode) {
 
     Post post = postsRepository.findPostById(id);
 
@@ -264,39 +270,46 @@ public class PostsServiceImpl implements PostsService {
       return new PostEditResponse();
     }
 
-    PostEditResponse response = validatePostData(title, text);
+    PostEditResponse response = validatePostData(request.getTitle(), request.getText());
 
     if (!response.isResult()) {
       return response;
     }
 
-    fillPost(post, active, timestamp, title, text, premoderationMode);
+    fillPost(
+        post,
+        request.getActive(),
+        request.getTimestamp(),
+        request.getTitle(),
+        request.getText(),
+        premoderationMode);
+
     clearPostSubData(post);
     postsRepository.saveAndFlush(post);
-    updatePostTags(post, tagNames);
+    updatePostTags(post, request.getTagNames());
 
     return response;
   }
 
   @Override
-  public synchronized ResponseEntity<?> addComment(
-      int parentId, int postId, String text, Principal principal) {
+  public synchronized PostEditResponse addComment(AddCommentRequest request, Principal principal) {
+    PostEditResponse response = new PostEditResponse();
+    Post post = postsRepository.findPostById(request.getPostId());
 
-    Post post = postsRepository.findPostById(postId);
+    if ((post == null) ||
+        (!post.getModerationStatus().equals(ModerationStatusType.ACCEPTED)) ||
+        (request.getParentId() != DEFAULT_VALUE &&
+            post.getComments().stream().noneMatch(
+                comment -> comment.getId() == request.getParentId()))) {
 
-    if ((post == null) || (!post.getModerationStatus().equals(ModerationStatusType.ACCEPTED)) ||
-        (parentId != DEFAULT_VALUE &&
-            post.getComments().stream().noneMatch(comment -> comment.getId() == parentId))) {
-
-      return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+      return response;
     }
 
-    PostEditResponse creationResponse = new PostEditResponse();
-    PostErrors creationErrors = getCommentErrors(text, creationResponse);
+    PostErrors creationErrors = getCommentErrors(request.getText(), response);
 
-    if (!creationResponse.isResult()) {
-      creationResponse.setCreationErrors(creationErrors);
-      return new ResponseEntity<>(creationResponse, HttpStatus.BAD_REQUEST);
+    if (!response.isResult()) {
+      response.setCreationErrors(creationErrors);
+      return response;
     }
 
     PostComment comment = new PostComment();
@@ -305,33 +318,34 @@ public class PostsServiceImpl implements PostsService {
     comment.setUser(user);
     comment.setPost(post);
 
-    if (parentId != DEFAULT_VALUE) {
-      comment.setParentComment(commentsRepository.getOne(parentId));
+    if (request.getParentId() != DEFAULT_VALUE) {
+      comment.setParentComment(commentsRepository.getOne(request.getParentId()));
     }
 
     long currentTime = System.currentTimeMillis();
 
     comment.setTime(new Timestamp(currentTime));
-    comment.setText("");
 
-    text = uploadingImages(text);
+    request.setText(uploadingImages(request.getText()));
 
-    comment.setText(text);
+    comment.setText(request.getText());
 
     commentsRepository.saveAndFlush(comment);
 
-    CommentResponse response = new CommentResponse();
+    CommentResponse commentResponse = new CommentResponse();
 
-    response.setId(comment.getId());
+    commentResponse.setId(comment.getId());
 
-    return new ResponseEntity<>(response, HttpStatus.OK);
+    response.setCommentResponse(commentResponse);
+
+    return response;
   }
 
   @Override
-  public synchronized VoteResponse addVote(int postId, short voteValue) {
+  public synchronized VoteResponse addVote(AddVoteRequest request, short voteValue) {
     VoteResponse response = new VoteResponse();
     User user = getCurrentUser();
-    Post post = postsRepository.findPostById(postId);
+    Post post = postsRepository.findPostById(request.getPostId());
 
     if (!post.getModerationStatus().equals(ModerationStatusType.ACCEPTED)) {
       return response;
@@ -405,19 +419,16 @@ public class PostsServiceImpl implements PostsService {
   }
 
   @Override
-  public synchronized PostEditResponse moderatePost(Map<String, String> moderateRequest) {
+  public synchronized PostEditResponse moderatePost(ModerateRequest request) {
     PostEditResponse response = new PostEditResponse();
-
-    Post post = postsRepository.findPostById(Integer.parseInt(moderateRequest.get("post_id")));
+    Post post = postsRepository.findPostById(request.getPostId());
 
     if (post == null) {
       response.setResult(false);
       return response;
     }
 
-    String decision = moderateRequest.get("decision");
-
-    if (decision.equals("accept")) {
+    if (request.getDecision().equals("accept")) {
       post.setModerationStatus(ModerationStatusType.ACCEPTED);
     } else {
       post.setModerationStatus(ModerationStatusType.DECLINED);

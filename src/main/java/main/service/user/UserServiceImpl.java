@@ -6,7 +6,6 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
-import java.util.Map;
 import java.util.Properties;
 import javax.mail.Message.RecipientType;
 import javax.mail.MessagingException;
@@ -21,6 +20,9 @@ import javax.mail.internet.MimeMultipart;
 import javax.xml.bind.DatatypeConverter;
 import main.api.RegisterErrors;
 import main.api.RestoreErrors;
+import main.api.request.EditProfileRequest;
+import main.api.request.GetRestoreRequest;
+import main.api.request.RegisterRequest;
 import main.api.request.RestoreRequest;
 import main.api.response.EditProfileResponse;
 import main.api.response.RegisterResponse;
@@ -30,8 +32,6 @@ import main.repository.captcha.CaptchaRepository;
 import main.repository.users.UsersRepository;
 import org.apache.commons.io.FileUtils;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -68,15 +68,13 @@ public class UserServiceImpl implements UserService {
 
 
   @Override
-  public synchronized RegisterResponse addUser(Map<String, String> registerRequest) {
-    String password = registerRequest.get("password");
-    String name = registerRequest.get("name");
-    String email = registerRequest.get("e_mail");
-    String captcha = registerRequest.get("captcha");
-    String captchaSecret = registerRequest.get("captcha_secret");
-
-    RegisterResponse response
-        = getRegisterResponse(password, name, email, captcha, captchaSecret);
+  public synchronized RegisterResponse addUser(RegisterRequest request) {
+    RegisterResponse response = getRegisterResponse(
+        request.getPassword(),
+        request.getName(),
+        request.getEmail(),
+        request.getCaptcha(),
+        request.getCaptchaSecret());
 
     if (!response.isResult()) {
       return response;
@@ -86,9 +84,9 @@ public class UserServiceImpl implements UserService {
 
     user.setIsModerator(NOT_MODERATOR_MARKER);
     user.setRegTime(Timestamp.valueOf(LocalDateTime.now()));
-    user.setName(registerRequest.get("name"));
-    user.setEmail(registerRequest.get("e_mail"));
-    user.setPassword(passwordEncoder().encode(registerRequest.get("password")));
+    user.setName(request.getName());
+    user.setEmail(request.getEmail());
+    user.setPassword(passwordEncoder().encode(request.getPassword()));
 
     usersRepository.saveAndFlush(user);
 
@@ -96,22 +94,23 @@ public class UserServiceImpl implements UserService {
   }
 
   @Override
-  public ResponseEntity<?> editUser(Map<String, String> editRequest) {
+  public EditProfileResponse editUser(EditProfileRequest request) {
     SecurityContext currentContext = SecurityContextHolder.getContext();
     User user = usersRepository.findFirstByEmail(
         currentContext.getAuthentication().getName());
 
-    String name = editRequest.get("name");
-    String email = editRequest.get("email");
-    String password = editRequest.get("password");
-    String removePhoto = editRequest.get("removePhoto");
-
     EditProfileResponse response = new EditProfileResponse();
     RegisterErrors errors = new RegisterErrors();
 
-    response.setResult(isCorrectUserData(name, email, password, errors));
+    response.setResult(isCorrectUserData(
+        request.getName(),
+        request.getEmail(),
+        request.getPassword(),
+        errors));
 
-    if (!user.getEmail().equals(email) && usersRepository.findFirstByEmail(email) != null) {
+    if (!user.getEmail().equals(request.getEmail()) &&
+        usersRepository.findFirstByEmail(request.getEmail()) != null) {
+
       errors.setEmail(DOUBLE_EMAIL_ERROR_MESSAGE);
       response.setResult(false);
     }
@@ -119,20 +118,20 @@ public class UserServiceImpl implements UserService {
     if (!response.isResult()) {
       response.setErrors(errors);
 
-      return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+      return response;
     }
 
-    if (!user.getName().equals(name)) {
-      user.setName(name);
+    if (!user.getName().equals(request.getName())) {
+      user.setName(request.getName());
     }
 
-    user.setEmail(email);
+    user.setEmail(request.getEmail());
 
-    if (password != null) {
-      user.setPassword(passwordEncoder().encode(password));
+    if (request.getPassword() != null) {
+      user.setPassword(passwordEncoder().encode(request.getPassword()));
     }
 
-    if (removePhoto.equals("1")) {
+    if (request.getRemovePhoto() == 1) {
       File file = new File("target/classes/static" +
           user.getPhoto().replaceAll("\\\\", "/"));
 
@@ -145,19 +144,19 @@ public class UserServiceImpl implements UserService {
       user.setPhoto(null);
 
     } else {
-      user.setPhoto(editRequest.get("photo"));
+      user.setPhoto(request.getPhoto());
     }
 
     usersRepository.saveAndFlush(user);
     SecurityContextHolder.clearContext();
 
-    return new ResponseEntity<>(response, HttpStatus.UNAUTHORIZED);
+    return response;
   }
 
   @Override
-  public RestoreResponse sendRestoreRequestUser(String email) {
+  public RestoreResponse sendRestoreRequestUser(GetRestoreRequest request) {
     RestoreResponse response = new RestoreResponse();
-    User user = usersRepository.findFirstByEmail(email);
+    User user = usersRepository.findFirstByEmail(request.getEmail());
 
     if (user == null) {
       return response;
@@ -168,7 +167,7 @@ public class UserServiceImpl implements UserService {
 
     usersRepository.saveAndFlush(user);
 
-    sendRestoreEmail(email, hash);
+    sendRestoreEmail(request.getEmail(), hash);
     response.setResult(true);
 
     return response;

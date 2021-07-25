@@ -1,11 +1,15 @@
 package main.controller;
 
 import java.security.Principal;
-import java.util.HashMap;
-import java.util.Map;
 import main.api.request.AddCommentRequest;
+import main.api.request.EditProfileRequest;
+import main.api.request.ModerateRequest;
+import main.api.request.SettingsRequest;
 import main.api.response.CalendarResponse;
+import main.api.response.EditProfileResponse;
+import main.api.response.ImageResponse;
 import main.api.response.InitResponse;
+import main.api.response.PostEditResponse;
 import main.api.response.SettingsResponse;
 import main.api.response.StatisticsResponse;
 import main.api.response.TagResponse;
@@ -58,50 +62,59 @@ public class ApiGeneralController {
 
 
   @GetMapping("/init")
-  public InitResponse init() {
-    return initResponse;
+  public ResponseEntity<InitResponse> init() {
+    return new ResponseEntity<>(initResponse, HttpStatus.OK);
   }
 
   @GetMapping("/settings")
-  public SettingsResponse settings() {
-    return settingsService.getGlobalSettings();
+  public ResponseEntity<SettingsResponse> settings() {
+    return new ResponseEntity<>(settingsService.getGlobalSettings(), HttpStatus.OK);
   }
 
   @GetMapping("/tag")
-  public TagResponse tags(@RequestParam(required = false) String query) {
-    if (query == null) {
-      return tagsService.getTags();
-    }
-    return tagsService.getTag(query);
+  public ResponseEntity<TagResponse> tags(@RequestParam(required = false) String query) {
+    return query == null
+        ? new ResponseEntity<>(tagsService.getTags(), HttpStatus.OK)
+        : new ResponseEntity<>(tagsService.getTag(query), HttpStatus.OK);
   }
 
   @GetMapping("/calendar")
-  public CalendarResponse calendar(@RequestParam(required = false, defaultValue = "0") int year) {
-    return calendarService.getCalendar(year);
+  public ResponseEntity<CalendarResponse> calendar(
+      @RequestParam(required = false, defaultValue = "0") int year) {
+
+    return new ResponseEntity<>(calendarService.getCalendar(year), HttpStatus.OK);
   }
 
   @PostMapping(value = "/image", consumes = "multipart/form-data")
   @PreAuthorize("hasAuthority('use')")
   public ResponseEntity<?> addImage(@RequestParam("image") MultipartFile file) {
-    return imageService.addImage(file);
+    ImageResponse response = imageService.addImage(file);
+
+    return response.isResult()
+        ? new ResponseEntity<>(response.getImagePath(), HttpStatus.OK)
+        : new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
   }
 
   @PostMapping(value = "/comment", consumes = MediaType.APPLICATION_JSON_VALUE)
   @PreAuthorize("hasAuthority('use')")
   public ResponseEntity<?> addComment(
-      @RequestBody AddCommentRequest addCommentRequest, Principal principal) {
+      @RequestBody AddCommentRequest request, Principal principal) {
 
-    return postsService.addComment(
-        addCommentRequest.getParentId(),
-        addCommentRequest.getPostId(),
-        addCommentRequest.getText(),
-        principal);
+    PostEditResponse response = postsService.addComment(request, principal);
+
+    if (response.isResult() && response.getCommentResponse() == null) {
+      return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+    }
+
+    return response.isResult()
+        ? new ResponseEntity<>(response.getCommentResponse(), HttpStatus.OK)
+        : new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
   }
 
   @GetMapping("/statistics/my")
   @PreAuthorize("hasAuthority('use')")
-  public StatisticsResponse myStatistics() {
-    return postsService.getMyStatistics();
+  public ResponseEntity<StatisticsResponse> myStatistics() {
+    return new ResponseEntity<>(postsService.getMyStatistics(), HttpStatus.OK);
   }
 
   @GetMapping("/statistics/all")
@@ -116,8 +129,14 @@ public class ApiGeneralController {
 
   @PostMapping(value = "/profile/my", consumes = MediaType.APPLICATION_JSON_VALUE)
   @PreAuthorize("hasAuthority('use')")
-  public ResponseEntity<?> editProfile(@RequestBody Map<String, String> editRequest) {
-    return userService.editUser(editRequest);
+  public ResponseEntity<EditProfileResponse> editProfile(
+      @RequestBody EditProfileRequest request) {
+
+    EditProfileResponse response = userService.editUser(request);
+
+    return response.isResult()
+        ? new ResponseEntity<>(response, HttpStatus.UNAUTHORIZED)
+        : new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
   }
 
   @PostMapping(value = "/profile/my", consumes = "multipart/form-data")
@@ -126,36 +145,40 @@ public class ApiGeneralController {
       @RequestParam("photo") MultipartFile file,
       @RequestParam("name") String name,
       @RequestParam("email") String email,
-      @RequestParam("removePhoto") String removePhoto,
+      @RequestParam("removePhoto") short removePhoto,
       @RequestParam(name = "password", required = false) String password) {
 
-    ResponseEntity<?> responseEntity = imageService.addAvatar(file);
+    ImageResponse imageResponse = imageService.addAvatar(file);
 
-    if (responseEntity.getStatusCode().isError()) {
-      return responseEntity;
+    if (!imageResponse.isResult()) {
+      return new ResponseEntity<>(imageResponse, HttpStatus.BAD_REQUEST);
     }
 
-    Map<String, String> request = new HashMap<>();
+    EditProfileRequest request = new EditProfileRequest();
 
-    request.put("name", name);
-    request.put("email", email);
-    request.put("password", password);
-    request.put("removePhoto", removePhoto);
-    request.put("photo", String.valueOf(responseEntity.getBody()));
+    request.setName(name);
+    request.setEmail(email);
+    request.setPassword(password);
+    request.setRemovePhoto(removePhoto);
+    request.setPhoto(imageResponse.getImagePath());
 
-    return userService.editUser(request);
+    EditProfileResponse response = userService.editUser(request);
+
+    return response.isResult()
+        ? new ResponseEntity<>(response, HttpStatus.UNAUTHORIZED)
+        : new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
   }
 
   @PostMapping(value = "/moderation", consumes = MediaType.APPLICATION_JSON_VALUE)
   @PreAuthorize("hasAuthority('moderate')")
-  public ResponseEntity<?> moderatePost(@RequestBody Map<String, String> moderateRequest) {
-    return new ResponseEntity<>(postsService.moderatePost(moderateRequest), HttpStatus.OK);
+  public ResponseEntity<PostEditResponse> moderatePost(@RequestBody ModerateRequest request) {
+    return new ResponseEntity<>(postsService.moderatePost(request), HttpStatus.OK);
   }
 
   @PutMapping(value = "/settings", consumes = MediaType.APPLICATION_JSON_VALUE)
   @PreAuthorize("hasAuthority('moderate')")
-  public ResponseEntity<?> setSettings(@RequestBody Map<String, Boolean> settingsRequest) {
-    settingsService.setGlobalSettings(settingsRequest);
+  public ResponseEntity<?> setSettings(@RequestBody SettingsRequest request) {
+    settingsService.setGlobalSettings(request);
 
     return new ResponseEntity<>(HttpStatus.OK);
   }

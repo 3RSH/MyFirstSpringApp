@@ -1,10 +1,13 @@
 package main.controller;
 
 import java.security.Principal;
-import java.util.Map;
+import main.api.request.GetRestoreRequest;
+import main.api.request.LoginRequest;
+import main.api.request.RegisterRequest;
 import main.api.request.RestoreRequest;
 import main.api.response.CaptchaResponse;
 import main.api.response.CheckLoginResponse;
+import main.api.response.RestoreResponse;
 import main.service.captcha.CaptchaServiceImpl;
 import main.service.login.LoginServiceImpl;
 import main.service.settings.SettingsServiceImpl;
@@ -38,36 +41,34 @@ public class ApiAuthController {
 
 
   @GetMapping("/check")
-  public CheckLoginResponse check(Principal principal) {
-    return loginService.getCheckResponse(principal);
+  public ResponseEntity<CheckLoginResponse> check(Principal principal) {
+    return new ResponseEntity<>(loginService.getCheckResponse(principal), HttpStatus.OK);
   }
 
   @PostMapping(path = "/login", consumes = MediaType.APPLICATION_JSON_VALUE)
-  public CheckLoginResponse login(@RequestBody Map<String, String> loginRequest) {
-    return loginService.getLoginResponse(loginRequest);
+  public ResponseEntity<CheckLoginResponse> login(@RequestBody LoginRequest request) {
+    return new ResponseEntity<>(loginService.getLoginResponse(request), HttpStatus.OK);
   }
 
   @GetMapping("/captcha")
-  public CaptchaResponse getCaptcha() {
-    return captchaService.getNewCaptcha();
+  public ResponseEntity<CaptchaResponse> getCaptcha() {
+    return new ResponseEntity<>(captchaService.getNewCaptcha(), HttpStatus.OK);
   }
 
   @PostMapping(path = "/register", consumes = MediaType.APPLICATION_JSON_VALUE)
-  public ResponseEntity<?> register(@RequestBody Map<String, String> registerRequest) {
+  public ResponseEntity<?> register(@RequestBody RegisterRequest request) {
     return settingsService.getSetting("MULTIUSER_MODE")
-        ? new ResponseEntity<>(userService.addUser(registerRequest), HttpStatus.OK)
+        ? new ResponseEntity<>(userService.addUser(request), HttpStatus.OK)
         : new ResponseEntity<>(HttpStatus.NOT_FOUND);
   }
 
   @PostMapping(path = "/restore", consumes = MediaType.APPLICATION_JSON_VALUE)
-  public ResponseEntity<?> restore(@RequestBody Map<String, String> restoreRequest) {
-    return new ResponseEntity<>(
-        userService.sendRestoreRequestUser(restoreRequest.get("email")),
-        HttpStatus.OK);
+  public ResponseEntity<RestoreResponse> getRestore(@RequestBody GetRestoreRequest request) {
+    return new ResponseEntity<>(userService.sendRestoreRequestUser(request), HttpStatus.OK);
   }
 
   @PostMapping(path = "/password", consumes = MediaType.APPLICATION_JSON_VALUE)
-  public ResponseEntity<?> restore(@RequestBody RestoreRequest request) {
+  public ResponseEntity<RestoreResponse> restore(@RequestBody RestoreRequest request) {
     return new ResponseEntity<>(userService.restoreUser(request), HttpStatus.OK);
   }
 }

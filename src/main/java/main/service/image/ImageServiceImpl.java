@@ -7,14 +7,12 @@ import java.io.IOException;
 import java.util.Objects;
 import javax.imageio.ImageIO;
 import main.api.ImageErrors;
-import main.api.response.ImageErrorsResponse;
+import main.api.response.ImageResponse;
 import main.model.User;
 import main.repository.users.UsersRepository;
 import org.apache.commons.io.FileUtils;
 import org.imgscalr.Scalr;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -30,7 +28,6 @@ public class ImageServiceImpl implements ImageService {
   private static final String[] SYMBOLS = {"a", "b", "c", "d", "e", "f", "g", "h", "i", "j"};
 
   private final UsersRepository usersRepository;
-  private ImageErrorsResponse errorsResponse;
 
 
   public ImageServiceImpl(@Qualifier("UsersRepository") UsersRepository usersRepository) {
@@ -39,14 +36,24 @@ public class ImageServiceImpl implements ImageService {
 
 
   @Override
-  public ResponseEntity<?> addImage(MultipartFile file) {
-    return isValidImage(file)
-        ? new ResponseEntity<>(createFile(file, getDir(file)), HttpStatus.OK)
-        : new ResponseEntity<>(errorsResponse, HttpStatus.BAD_REQUEST);
+  public ImageResponse addImage(MultipartFile file) {
+    ImageResponse response = new ImageResponse();
+
+    if (isValidImage(file, response)) {
+      createFile(file, getDir(file), response);
+    }
+
+    return response;
   }
 
   @Override
-  public ResponseEntity<?> addAvatar(MultipartFile file) {
+  public ImageResponse addAvatar(MultipartFile file) {
+    ImageResponse response = new ImageResponse();
+
+    if (!isValidImage(file, response)) {
+      return response;
+    }
+
     SecurityContext currentContext = SecurityContextHolder.getContext();
     User user = usersRepository.findFirstByEmail(
         currentContext.getAuthentication().getName());
@@ -61,8 +68,6 @@ public class ImageServiceImpl implements ImageService {
         e.printStackTrace();
       }
     }
-
-    String path = "";
 
     try {
       BufferedImage originalImage;
@@ -93,41 +98,39 @@ public class ImageServiceImpl implements ImageService {
         }
       }
 
-      path = image.getPath().split("static")[INCREMENT_INDEX];
+      response.setImagePath(image.getPath().split("static")[INCREMENT_INDEX]);
     } catch (IOException e) {
       e.printStackTrace();
     }
 
-    return isValidImage(file)
-        ? new ResponseEntity<>(path, HttpStatus.OK)
-        : new ResponseEntity<>(errorsResponse, HttpStatus.BAD_REQUEST);
+    return response;
   }
 
 
-  private boolean isValidImage(MultipartFile file) {
+  private boolean isValidImage(MultipartFile file, ImageResponse response) {
     ImageErrors errors = new ImageErrors();
     String contentType = file.getContentType();
-    errorsResponse = new ImageErrorsResponse();
 
     if (file.isEmpty()) {
       errors.setSize("Файл пустой");
-      errorsResponse.setImageErrors(errors);
+      response.setImageErrors(errors);
       return false;
     }
 
     if (contentType == null ||
         (!contentType.equals("image/jpeg") && !contentType.equals("image/png"))) {
       errors.setImage("Недопустимый формат файла");
-      errorsResponse.setImageErrors(errors);
+      response.setImageErrors(errors);
       return false;
     }
 
     if (file.getSize() > MAX_IMAGE_SIZE) {
       errors.setSize("Размер файла превышает допустимый размер");
-      errorsResponse.setImageErrors(errors);
+      response.setImageErrors(errors);
       return false;
     }
 
+    response.setResult(true);
     return true;
   }
 
@@ -147,7 +150,7 @@ public class ImageServiceImpl implements ImageService {
         SYMBOLS[Short.parseShort(hash.substring(index, ++index))]);
   }
 
-  private String createFile(MultipartFile file, File dir) {
+  private void createFile(MultipartFile file, File dir, ImageResponse response) {
     File convertFile = new File(dir.getPath() + "/" + file.getOriginalFilename());
 
     if (dir.mkdirs()) {
@@ -164,6 +167,7 @@ public class ImageServiceImpl implements ImageService {
       }
     }
 
-    return convertFile.getPath().split("static")[INCREMENT_INDEX];
+    response.setResult(true);
+    response.setImagePath(convertFile.getPath().split("static")[INCREMENT_INDEX]);
   }
 }

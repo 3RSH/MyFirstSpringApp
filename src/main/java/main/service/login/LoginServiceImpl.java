@@ -1,7 +1,7 @@
 package main.service.login;
 
 import java.security.Principal;
-import java.util.Map;
+import main.api.request.LoginRequest;
 import main.api.response.CheckLoginResponse;
 import main.api.response.UserResponse;
 import main.model.User;
@@ -39,18 +39,16 @@ public class LoginServiceImpl implements LoginService {
 
 
   @Override
-  public CheckLoginResponse getLoginResponse(Map<String, String> loginRequest) {
-    String email = loginRequest.get("e_mail");
-    String password = loginRequest.get("password");
+  public CheckLoginResponse getLoginResponse(LoginRequest request) {
 
-    User user = usersRepository.findFirstByEmail(email);
+    User user = usersRepository.findFirstByEmail(request.getEmail());
 
-    if (user == null || !passwordEncoder().matches(password, user.getPassword())) {
+    if (user == null || !passwordEncoder().matches(request.getPassword(), user.getPassword())) {
       return new CheckLoginResponse();
     }
 
     Authentication auth = authenticationManager.authenticate(
-        new UsernamePasswordAuthenticationToken(email, password));
+        new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword()));
 
     SecurityContextHolder.getContext().setAuthentication(auth);
 
@@ -63,8 +61,7 @@ public class LoginServiceImpl implements LoginService {
       usersRepository.saveAndFlush(user);
     }
 
-    return
-        getCheckLoginResponse(user);
+    return getCheckLoginResponse(user);
   }
 
   @Override

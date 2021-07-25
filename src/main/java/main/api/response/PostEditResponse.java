@@ -15,6 +15,11 @@ public class PostEditResponse {
 
   @Getter
   @Setter
+  @JsonInclude(Include.NON_NULL)
+  private CommentResponse commentResponse;
+
+  @Getter
+  @Setter
   @JsonProperty("errors")
   @JsonInclude(Include.NON_NULL)
   private PostErrors creationErrors;
