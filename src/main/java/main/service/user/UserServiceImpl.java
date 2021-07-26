@@ -45,6 +45,16 @@ public class UserServiceImpl implements UserService {
       + "[A-Za-zА-Яа-яё0-9\\-]{0,20}\\s*[A-Za-zА-Яа-яё0-9\\-]{0,20}";
   private static final String EMAIL_REGEX = "^([a-z0-9_-]+\\.)*[a-z0-9_-]+@[a-z0-9_-]"
       + "+(\\.[a-z0-9_-]+)*\\.[a-z]{2,6}$";
+  private static final String SLASH_REGEX = "/";
+  private static final String BACKSLASH_REGEX = "\\\\";
+  private static final String EMPTY_STRING = "";
+  private static final String DIGEST_TYPE = "MD5";
+  private static final String STATIC_PATH = "target/classes/static";
+  private static final String RESTORE_EMAIL_TITLE = "Восстановление пароля";
+  private static final String RESTORE_EMAIL_LINK = "http://localhost:8080/login/change-password/";
+  private static final String RESTORE_EMAIL_TEXT = "Для смены пароля перейдите по ссылке: "
+      + "<a href=\"%s\">%s</a>";
+  private static final String RESTORE_EMAIL_TYPE = "text/html; charset=UTF-8";
   private static final String CAPTCHA_ERROR_MESSAGE = "Код с картинки введён неверно";
   private static final String PASSWORD_ERROR_MESSAGE = "Пароль короче 6-ти символов";
   private static final String EMAIL_ERROR_MESSAGE = "Почта указана неверно";
@@ -52,6 +62,18 @@ public class UserServiceImpl implements UserService {
   private static final String DOUBLE_EMAIL_ERROR_MESSAGE = "Этот e-mail уже зарегистрирован";
   private static final String LINK_ERROR_MESSAGE = "Ссылка для восстановления пароля устарела. "
       + "<a href=\"/login/restore-password\">Запросить ссылку снова</a>";
+
+  private static final String SENDER_EMAIL = "b00b4@mail.ru";
+  private static final String SENDER_HOST = "smtp.mail.ru";
+  private static final String SENDER_NAME = "b00b4";
+  private static final String SENDER_PASSWORD = "OxAmbVkhTCNndp4iabbT";
+  private static final String AUTH_PROPERTY = "mail.smtp.auth";
+  private static final String STARTTLS_PROPERTY = "mail.smtp.starttls.enable";
+  private static final String HOST_PROPERTY = "mail.smtp.host";
+  private static final String PORT_PROPERTY = "mail.smtp.port";
+  private static final String SSL_PROPERTY = "mail.smtp.ssl.enable";
+  private static final String TRUE_PROPERTY_VALUE = "true";
+  private static final String PORT_PROPERTY_VALUE = "465";
 
   private static final short NOT_MODERATOR_MARKER = -1;
   private static final int MIN_PASSWORD_SIZE = 6;
@@ -132,8 +154,8 @@ public class UserServiceImpl implements UserService {
     }
 
     if (request.getRemovePhoto() == 1) {
-      File file = new File("target/classes/static" +
-          user.getPhoto().replaceAll("\\\\", "/"));
+      File file = new File(STATIC_PATH +
+          user.getPhoto().replaceAll(BACKSLASH_REGEX, SLASH_REGEX));
 
       try {
         FileUtils.deleteDirectory(file.getParentFile());
@@ -214,38 +236,34 @@ public class UserServiceImpl implements UserService {
 
 
   private void sendRestoreEmail(String email, String hash) {
-    String from = "b00b4@mail.ru";
-    String host = "smtp.mail.ru";
-
     Properties properties = System.getProperties();
-    properties.put("mail.smtp.auth", "true");
-    properties.put("mail.smtp.starttls.enable", "true");
-    properties.put("mail.smtp.host", host);
-    properties.put("mail.smtp.port", "465");
-    properties.put("mail.smtp.ssl.enable", "true");
+    properties.put(AUTH_PROPERTY, TRUE_PROPERTY_VALUE);
+    properties.put(STARTTLS_PROPERTY, TRUE_PROPERTY_VALUE);
+    properties.put(HOST_PROPERTY, SENDER_HOST);
+    properties.put(PORT_PROPERTY, PORT_PROPERTY_VALUE);
+    properties.put(SSL_PROPERTY, TRUE_PROPERTY_VALUE);
 
     Session session = Session.getDefaultInstance(properties,
         new javax.mail.Authenticator() {
           @Override
           protected PasswordAuthentication getPasswordAuthentication() {
-            return new PasswordAuthentication("b00b4", "OxAmbVkhTCNndp4iabbT");
+            return new PasswordAuthentication(SENDER_NAME, SENDER_PASSWORD);
           }
         });
 
     try {
       MimeMessage message = new MimeMessage(session);
 
-      message.setFrom(new InternetAddress(from));
+      message.setFrom(new InternetAddress(SENDER_EMAIL));
       message.addRecipient(RecipientType.TO, new InternetAddress(email));
-      message.setSubject("Восстановление пароля");
+      message.setSubject(RESTORE_EMAIL_TITLE);
 
-      String link = "http://localhost:8080/login/change-password/" + hash;
+      String link = RESTORE_EMAIL_LINK + hash;
 
-      String text = "Для смены пароля перейдите по ссылке:\n"
-          + "<a href=\"" + link + "\">" + link + "</a>";
+      String text = String.format(RESTORE_EMAIL_TEXT, link, link);
 
       MimeBodyPart mimeBodyPart = new MimeBodyPart();
-      mimeBodyPart.setContent(text, "text/html; charset=UTF-8");
+      mimeBodyPart.setContent(text, RESTORE_EMAIL_TYPE);
 
       Multipart multipart = new MimeMultipart();
       multipart.addBodyPart(mimeBodyPart);
@@ -260,10 +278,10 @@ public class UserServiceImpl implements UserService {
 
   private String getHash(User user) {
     String string = user.getPassword() + user.getEmail();
-    String hash = "";
+    String hash = EMPTY_STRING;
 
     try {
-      MessageDigest messageDigest = MessageDigest.getInstance("MD5");
+      MessageDigest messageDigest = MessageDigest.getInstance(DIGEST_TYPE);
 
       messageDigest.update(string.getBytes());
       byte[] digest = messageDigest.digest();
@@ -320,7 +338,7 @@ public class UserServiceImpl implements UserService {
       result = false;
     }
 
-    if (password != null && password.length() < 6) {
+    if (password != null && password.length() < MIN_PASSWORD_SIZE) {
       errors.setPassword(PASSWORD_ERROR_MESSAGE);
       result = false;
     }

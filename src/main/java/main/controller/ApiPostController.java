@@ -29,6 +29,14 @@ public class ApiPostController {
   private static final int NULL_ID = 0;
   private static final short LIKE_VOTE = 1;
   private static final short DISLIKE_VOTE = -1;
+  private static final String DEFAULT_OFFSET = "0";
+  private static final String DEFAULT_LIMIT = "10";
+  private static final String DEFAULT_POST_MODE = "recent";
+  private static final String DEFAULT_MY_POST_MODE = "inactive";
+  private static final String DEFAULT_MODERATE_POST_MODE = "new";
+  private static final String POST_ID_PARAMETER = "ID";
+  private static final String MODERATION_SETTING_CODE = "POST_PREMODERATION";
+
 
   private final PostsServiceImpl postsService;
   private final SettingsServiceImpl settingsService;
@@ -42,9 +50,9 @@ public class ApiPostController {
 
   @GetMapping
   public ResponseEntity<PostPreviewResponse> posts(
-      @RequestParam(required = false, defaultValue = "0") int offset,
-      @RequestParam(required = false, defaultValue = "10") int limit,
-      @RequestParam(required = false, defaultValue = "recent") String mode) {
+      @RequestParam(required = false, defaultValue = DEFAULT_OFFSET) int offset,
+      @RequestParam(required = false, defaultValue = DEFAULT_LIMIT) int limit,
+      @RequestParam(required = false, defaultValue = DEFAULT_POST_MODE) String mode) {
 
     return new ResponseEntity<>(
         postsService.getPostsPreview(offset, limit, mode), HttpStatus.OK);
@@ -52,8 +60,8 @@ public class ApiPostController {
 
   @GetMapping("/search")
   public ResponseEntity<PostPreviewResponse> postsByQuery(
-      @RequestParam(required = false, defaultValue = "0") int offset,
-      @RequestParam(required = false, defaultValue = "10") int limit,
+      @RequestParam(required = false, defaultValue = DEFAULT_OFFSET) int offset,
+      @RequestParam(required = false, defaultValue = DEFAULT_LIMIT) int limit,
       @RequestParam String query) {
 
     return new ResponseEntity<>(
@@ -62,8 +70,8 @@ public class ApiPostController {
 
   @GetMapping("/byDate")
   public ResponseEntity<PostPreviewResponse> postsByDate(
-      @RequestParam(required = false, defaultValue = "0") int offset,
-      @RequestParam(required = false, defaultValue = "10") int limit,
+      @RequestParam(required = false, defaultValue = DEFAULT_OFFSET) int offset,
+      @RequestParam(required = false, defaultValue = DEFAULT_LIMIT) int limit,
       @RequestParam String date) {
 
     return new ResponseEntity<>(
@@ -72,8 +80,8 @@ public class ApiPostController {
 
   @GetMapping("/byTag")
   public ResponseEntity<PostPreviewResponse> postsByTag(
-      @RequestParam(required = false, defaultValue = "0") int offset,
-      @RequestParam(required = false, defaultValue = "10") int limit,
+      @RequestParam(required = false, defaultValue = DEFAULT_OFFSET) int offset,
+      @RequestParam(required = false, defaultValue = DEFAULT_LIMIT) int limit,
       @RequestParam String tag) {
 
     return new ResponseEntity<>(
@@ -81,7 +89,7 @@ public class ApiPostController {
   }
 
   @GetMapping("/{ID}")
-  public ResponseEntity<?> getPostById(@PathVariable("ID") int id) {
+  public ResponseEntity<?> getPostById(@PathVariable(POST_ID_PARAMETER) int id) {
     PostResponse postResponse = postsService.getPostById(id);
 
     return postResponse.getId() != NULL_ID
@@ -92,9 +100,9 @@ public class ApiPostController {
   @GetMapping("/my")
   @PreAuthorize("hasAuthority('use')")
   public ResponseEntity<PostPreviewResponse> myPosts(
-      @RequestParam(required = false, defaultValue = "0") int offset,
-      @RequestParam(required = false, defaultValue = "10") int limit,
-      @RequestParam(required = false, defaultValue = "inactive") String status) {
+      @RequestParam(required = false, defaultValue = DEFAULT_OFFSET) int offset,
+      @RequestParam(required = false, defaultValue = DEFAULT_LIMIT) int limit,
+      @RequestParam(required = false, defaultValue = DEFAULT_MY_POST_MODE) String status) {
 
     return new ResponseEntity<>(
         postsService.getMyPostsPreview(offset, limit, status), HttpStatus.OK);
@@ -106,18 +114,19 @@ public class ApiPostController {
       @RequestBody AddPostRequest request, Principal principal) {
 
     return new ResponseEntity<>(
-        postsService.addPost(request, principal, settingsService.getSetting("POST_PREMODERATION")),
+        postsService
+            .addPost(request, principal, settingsService.getSetting(MODERATION_SETTING_CODE)),
         HttpStatus.OK);
   }
 
   @PutMapping(path = "/{ID}", consumes = MediaType.APPLICATION_JSON_VALUE)
   @PreAuthorize("hasAuthority('use')")
   public ResponseEntity<PostEditResponse> editPost(
-      @PathVariable("ID") int id,
+      @PathVariable(POST_ID_PARAMETER) int id,
       @RequestBody AddPostRequest request) {
 
     return new ResponseEntity<>(
-        postsService.editPost(request, id, settingsService.getSetting("POST_PREMODERATION")),
+        postsService.editPost(request, id, settingsService.getSetting(MODERATION_SETTING_CODE)),
         HttpStatus.OK);
   }
 
@@ -138,9 +147,9 @@ public class ApiPostController {
   @GetMapping("/moderation")
   @PreAuthorize("hasAuthority('moderate')")
   public ResponseEntity<PostPreviewResponse> moderatedPosts(
-      @RequestParam(required = false, defaultValue = "0") int offset,
-      @RequestParam(required = false, defaultValue = "10") int limit,
-      @RequestParam(required = false, defaultValue = "new") String status) {
+      @RequestParam(required = false, defaultValue = DEFAULT_OFFSET) int offset,
+      @RequestParam(required = false, defaultValue = DEFAULT_LIMIT) int limit,
+      @RequestParam(required = false, defaultValue = DEFAULT_MODERATE_POST_MODE) String status) {
 
     return new ResponseEntity<>(
         postsService.getModeratedPostsPreview(offset, limit, status), HttpStatus.OK);

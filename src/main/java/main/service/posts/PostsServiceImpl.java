@@ -73,6 +73,33 @@ public class PostsServiceImpl implements PostsService {
   private static final int MIN_TEXT_SIZE = 50;
   private static final int MIN_COMMENT_SIZE = 3;
 
+  private static final String RECENT_POST_MODE = "recent";
+  private static final String POPULAR_POST_MODE = "popular";
+  private static final String BEST_POST_MODE = "best";
+  private static final String EARLY_POST_MODE = "early";
+  private static final String PENDING_POST_MODE = "pending";
+  private static final String DECLINED_POST_MODE = "declined";
+  private static final String PUBLISHED_POST_MODE = "published";
+  private static final String ACCEPTED_POST_MODE = "accepted";
+  private static final String ACCEPT_DECISION_VALUE = "accept";
+  private static final String EMPTY_STRING = "";
+  private static final String STATIC_PATH = "target/classes/static";
+  private static final String UPLOAD_PATH = "target/classes/static/upload";
+  private static final String END_IMAGES_PATH = "images/";
+  private static final String TITLE_ERROR = "Заголовок не установлен";
+  private static final String POST_TEXT_ERROR = "Текст публикации слишком короткий";
+  private static final String COMMENT_ERROR = "Текст комментария не задан или слишком короткий";
+
+  private static final String EMPTY_QUERY_REGEX = "\\s*";
+  private static final String DATE_SEPARATOR_REGEX = "-";
+  private static final String UPLOAD_REGEX = "upload";
+  private static final String IMAGES_REGEX = "images";
+  private static final String SLASH_REGEX = "/";
+  private static final String BACKSLASH_REGEX = "\\\\";
+  private static final String IMAGE_TAG_REGEX = "<img src=\".+?\">";
+  private static final String CLASSIC_HTML_TAG_REGEX = "<.*?>";
+  private static final String SYMBOL_HTML_TAG_REGEX = "&[a-zA-Z]{1,10};";
+
   private final PostsRepository postsRepository;
   private final VotesRepository votesRepository;
   private final UsersRepository usersRepository;
@@ -102,13 +129,13 @@ public class PostsServiceImpl implements PostsService {
     Pageable page = PageRequest.of(offset / limit, limit);
 
     switch (mode) {
-      case ("popular"):
+      case (POPULAR_POST_MODE):
         return getPostPreviewResponse(postsRepository.findPopularPosts(page));
 
-      case ("best"):
+      case (BEST_POST_MODE):
         return getPostPreviewResponse(postsRepository.findBestPosts(page));
 
-      case ("early"):
+      case (EARLY_POST_MODE):
         return getPostPreviewResponse(postsRepository.findEarlyPosts(page));
 
       default:
@@ -124,13 +151,13 @@ public class PostsServiceImpl implements PostsService {
         getId();
 
     switch (status) {
-      case ("pending"):
+      case (PENDING_POST_MODE):
         return getPostPreviewResponse(postsRepository.findPendingPostsByUser(userId, page));
 
-      case ("declined"):
+      case (DECLINED_POST_MODE):
         return getPostPreviewResponse(postsRepository.findDeclinedPostsByUser(userId, page));
 
-      case ("published"):
+      case (PUBLISHED_POST_MODE):
         return getPostPreviewResponse(postsRepository.findPublishedPostsByUser(userId, page));
 
       default:
@@ -140,8 +167,8 @@ public class PostsServiceImpl implements PostsService {
 
   @Override
   public PostPreviewResponse getPostsPreviewByQuery(int offset, int limit, String query) {
-    if (query.matches("\\s*")) {
-      return getPostsPreview(offset, limit, "recent");
+    if (query.matches(EMPTY_QUERY_REGEX)) {
+      return getPostsPreview(offset, limit, RECENT_POST_MODE);
     }
 
     Pageable page = PageRequest.of(offset / limit, limit);
@@ -152,7 +179,7 @@ public class PostsServiceImpl implements PostsService {
   @Override
   public PostPreviewResponse getPostsPreviewByDate(int offset, int limit, String date) {
     Pageable page = PageRequest.of(offset / limit, limit);
-    String[] dateParams = date.split("-");
+    String[] dateParams = date.split(DATE_SEPARATOR_REGEX);
 
     return getPostPreviewResponse(postsRepository.findPostsByDate(
         Integer.parseInt(dateParams[YEAR_INDEX]),
@@ -326,7 +353,7 @@ public class PostsServiceImpl implements PostsService {
 
     comment.setTime(new Timestamp(currentTime));
 
-    request.setText(uploadingImages(request.getText()));
+    request.setText(uploadingCommentImages(request.getText()));
 
     comment.setText(request.getText());
 
@@ -405,11 +432,11 @@ public class PostsServiceImpl implements PostsService {
     int moderatorId = getCurrentUser().getId();
 
     switch (status) {
-      case ("declined"):
+      case (DECLINED_POST_MODE):
         return getPostPreviewResponse(
             postsRepository.findDeclinedPostsByModerator(moderatorId, page));
 
-      case ("accepted"):
+      case (ACCEPTED_POST_MODE):
         return getPostPreviewResponse(
             postsRepository.findAcceptedPostsByModerator(moderatorId, page));
 
@@ -428,7 +455,7 @@ public class PostsServiceImpl implements PostsService {
       return response;
     }
 
-    if (request.getDecision().equals("accept")) {
+    if (request.getDecision().equals(ACCEPT_DECISION_VALUE)) {
       post.setModerationStatus(ModerationStatusType.ACCEPTED);
     } else {
       post.setModerationStatus(ModerationStatusType.DECLINED);
@@ -466,7 +493,7 @@ public class PostsServiceImpl implements PostsService {
 
     post.setTitle(title);
 
-    text = uploadingImages(text, post);
+    text = uploadingPostImages(text, post);
 
     post.setText(text);
 
@@ -515,14 +542,14 @@ public class PostsServiceImpl implements PostsService {
     }
   }
 
-  private String uploadingImages(String text, Post post) {
+  private String uploadingPostImages(String text, Post post) {
     List<String> tempPaths = getPathsFromText(text);
-    List<String> paths = new ArrayList<>(Collections.nCopies(tempPaths.size(), ""));
+    List<String> paths = new ArrayList<>(Collections.nCopies(tempPaths.size(), EMPTY_STRING));
 
     Collections.copy(paths, tempPaths);
 
     for (int i = 0; i < paths.size(); i++) {
-      String path = paths.get(i).replaceFirst("upload", "images");
+      String path = paths.get(i).replaceFirst(UPLOAD_REGEX, IMAGES_REGEX);
       paths.set(i, path);
     }
 
@@ -535,7 +562,7 @@ public class PostsServiceImpl implements PostsService {
 
     copyFiles(tempPaths, paths);
 
-    Path uploadPath = Paths.get("target/classes/static/upload");
+    Path uploadPath = Paths.get(UPLOAD_PATH);
 
     if (Files.exists(uploadPath)) {
       try {
@@ -550,14 +577,14 @@ public class PostsServiceImpl implements PostsService {
     return text;
   }
 
-  private String uploadingImages(String text) {
+  private String uploadingCommentImages(String text) {
     List<String> tempPaths = getPathsFromText(text);
-    List<String> paths = new ArrayList<>(Collections.nCopies(tempPaths.size(), ""));
+    List<String> paths = new ArrayList<>(Collections.nCopies(tempPaths.size(), EMPTY_STRING));
 
     Collections.copy(paths, tempPaths);
 
     for (int i = 0; i < paths.size(); i++) {
-      String path = paths.get(i).replaceFirst("upload", "images");
+      String path = paths.get(i).replaceFirst(UPLOAD_REGEX, IMAGES_REGEX);
       paths.set(i, path);
     }
 
@@ -587,7 +614,7 @@ public class PostsServiceImpl implements PostsService {
 
   private void deleteFiles(List<String> source) {
     for (String path : source) {
-      path = path.substring(0, path.lastIndexOf("images/") + IMAGE_PATH_OFFSET);
+      path = path.substring(0, path.lastIndexOf(END_IMAGES_PATH) + IMAGE_PATH_OFFSET);
       File dir = new File(path);
 
       try {
@@ -603,7 +630,7 @@ public class PostsServiceImpl implements PostsService {
 
       File sourceFile = new File(source.get(i));
       String destPath = destination.get(i);
-      File destinationDir = new File(destPath.substring(0, destPath.lastIndexOf("/")));
+      File destinationDir = new File(destPath.substring(0, destPath.lastIndexOf(SLASH_REGEX)));
       File destinationFile = new File(destination.get(i));
 
       if (destinationDir.mkdirs()) {
@@ -622,8 +649,8 @@ public class PostsServiceImpl implements PostsService {
       String path = paths.get(i);
 
       path = path.substring(FILENAME_START_INDEX, path.length() - FILENAME_END_INDEX_OFFSET);
-      path = path.replaceAll("\\\\", "/");
-      path = "target/classes/static" + path;
+      path = path.replaceAll(BACKSLASH_REGEX, SLASH_REGEX);
+      path = STATIC_PATH + path;
 
       paths.set(i, path);
     }
@@ -631,7 +658,7 @@ public class PostsServiceImpl implements PostsService {
 
   private List<String> getPathsFromText(String text) {
     List<String> paths = new ArrayList<>();
-    Pattern pattern = Pattern.compile("<img src=\".+?\">");
+    Pattern pattern = Pattern.compile(IMAGE_TAG_REGEX);
     Matcher matcher = pattern.matcher(text);
 
     while (matcher.find()) {
@@ -680,7 +707,9 @@ public class PostsServiceImpl implements PostsService {
 
   private String getAnnounce(Post post) {
     StringBuilder announce = new StringBuilder();
-    String text = post.getText().replaceAll("<.*?>", "");
+    String text = post.getText().replaceAll(CLASSIC_HTML_TAG_REGEX, EMPTY_STRING)
+        .replaceAll(SYMBOL_HTML_TAG_REGEX, EMPTY_STRING);
+
     int prepostMaxLength = PREPOST_STRING_COUNT * PREPOST_STRING_LENGTH;
 
     if (text.length() > prepostMaxLength) {
@@ -740,12 +769,12 @@ public class PostsServiceImpl implements PostsService {
     PostErrors errors = new PostErrors();
 
     if (title.length() < MIN_TITLE_SIZE) {
-      errors.setTitle("Заголовок не установлен");
+      errors.setTitle(TITLE_ERROR);
       response.setResult(false);
     }
 
     if (text.length() < MIN_TEXT_SIZE) {
-      errors.setText("Текст публикации слишком короткий");
+      errors.setText(POST_TEXT_ERROR);
       response.setResult(false);
     }
 
@@ -756,7 +785,7 @@ public class PostsServiceImpl implements PostsService {
     PostErrors errors = new PostErrors();
 
     if (text.length() < MIN_COMMENT_SIZE) {
-      errors.setText("Текст комментария не задан или слишком короткий");
+      errors.setText(COMMENT_ERROR);
       response.setResult(false);
     }
 

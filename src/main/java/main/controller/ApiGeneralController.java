@@ -36,6 +36,15 @@ import org.springframework.web.multipart.MultipartFile;
 @RequestMapping("/api")
 public class ApiGeneralController {
 
+  private static final String PHOTO_PARAMETER = "photo";
+  private static final String NAME_PARAMETER = "name";
+  private static final String EMAIL_PARAMETER = "email";
+  private static final String PASSWORD_PARAMETER = "password";
+  private static final String REMOVE_PHOTO_PARAMETER = "removePhoto";
+  private static final String DEFAULT_INT_PARAMETER = "0";
+  private static final String IMAGE_PARAMETER = "image";
+  private static final String STATISTIC_SETTING_CODE = "STATISTICS_IS_PUBLIC";
+
   private final InitResponse initResponse;
   private final SettingsServiceImpl settingsService;
   private final TagsServiceImpl tagsService;
@@ -80,14 +89,14 @@ public class ApiGeneralController {
 
   @GetMapping("/calendar")
   public ResponseEntity<CalendarResponse> calendar(
-      @RequestParam(required = false, defaultValue = "0") int year) {
+      @RequestParam(required = false, defaultValue = DEFAULT_INT_PARAMETER) int year) {
 
     return new ResponseEntity<>(calendarService.getCalendar(year), HttpStatus.OK);
   }
 
   @PostMapping(value = "/image", consumes = "multipart/form-data")
   @PreAuthorize("hasAuthority('use')")
-  public ResponseEntity<?> addImage(@RequestParam("image") MultipartFile file) {
+  public ResponseEntity<?> addImage(@RequestParam(IMAGE_PARAMETER) MultipartFile file) {
     ImageResponse response = imageService.addImage(file);
 
     return response.isResult()
@@ -120,7 +129,7 @@ public class ApiGeneralController {
   @GetMapping("/statistics/all")
   public ResponseEntity<?> allStatistics() {
     StatisticsResponse response
-        = postsService.getAllStatistics(settingsService.getSetting("STATISTICS_IS_PUBLIC"));
+        = postsService.getAllStatistics(settingsService.getSetting(STATISTIC_SETTING_CODE));
 
     return response.getPostsCount() != 0
         ? new ResponseEntity<>(response, HttpStatus.OK)
@@ -142,11 +151,11 @@ public class ApiGeneralController {
   @PostMapping(value = "/profile/my", consumes = "multipart/form-data")
   @PreAuthorize("hasAuthority('use')")
   public ResponseEntity<?> editProfile(
-      @RequestParam("photo") MultipartFile file,
-      @RequestParam("name") String name,
-      @RequestParam("email") String email,
-      @RequestParam("removePhoto") short removePhoto,
-      @RequestParam(name = "password", required = false) String password) {
+      @RequestParam(PHOTO_PARAMETER) MultipartFile file,
+      @RequestParam(NAME_PARAMETER) String name,
+      @RequestParam(EMAIL_PARAMETER) String email,
+      @RequestParam(REMOVE_PHOTO_PARAMETER) short removePhoto,
+      @RequestParam(name = PASSWORD_PARAMETER, required = false) String password) {
 
     ImageResponse imageResponse = imageService.addAvatar(file);
 

@@ -25,6 +25,8 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/auth")
 public class ApiAuthController {
 
+  private static final String MULTIUSER_SETTING_CODE = "MULTIUSER_MODE";
+
   private final CaptchaServiceImpl captchaService;
   private final UserServiceImpl userService;
   private final LoginServiceImpl loginService;
@@ -57,7 +59,7 @@ public class ApiAuthController {
 
   @PostMapping(path = "/register", consumes = MediaType.APPLICATION_JSON_VALUE)
   public ResponseEntity<?> register(@RequestBody RegisterRequest request) {
-    return settingsService.getSetting("MULTIUSER_MODE")
+    return settingsService.getSetting(MULTIUSER_SETTING_CODE)
         ? new ResponseEntity<>(userService.addUser(request), HttpStatus.OK)
         : new ResponseEntity<>(HttpStatus.NOT_FOUND);
   }

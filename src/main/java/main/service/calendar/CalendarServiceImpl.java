@@ -17,8 +17,9 @@ public class CalendarServiceImpl implements CalendarService {
 
   private static final int CURRENT_YEAR_MARKER = 0;
   private static final int INCREMENT_VALUE = 1;
+  private static final String DATE_FORMAT = "yyyy-MM-dd";
 
-  private final SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
+  private final SimpleDateFormat format = new SimpleDateFormat(DATE_FORMAT);
   private final PostsRepository postsRepository;
 
 

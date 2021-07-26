@@ -24,6 +24,18 @@ public class ImageServiceImpl implements ImageService {
   private static final int MAX_IMAGE_SIZE = 1_000_000;
   private static final int MAX_AVATAR_EXTENSION = 360;
   private static final int INCREMENT_INDEX = 1;
+  private static final String FILE_EXTENSION_SEPARATOR = ".";
+  private static final String SLASH_REGEX = "/";
+  private static final String BACKSLASH_REGEX = "\\\\";
+  private static final String STATIC_REGEX = "static";
+  private static final String STATIC_PATH = "target/classes/static";
+  private static final String AVATARS_PATH = "target/classes/static/avatars/";
+  private static final String UPLOAD_PATH = "target/classes/static/upload/";
+  private static final String JPG_CONTENT_TYPE = "image/jpeg";
+  private static final String PNG_CONTENT_TYPE = "image/png";
+  private static final String EMPTY_FILE_ERROR = "Файл пустой";
+  private static final String FORMAT_FILE_ERROR = "Недопустимый формат файла";
+  private static final String SIZE_FILE_ERROR = "Размер файла превышает допустимый размер";
 
   private static final String[] SYMBOLS = {"a", "b", "c", "d", "e", "f", "g", "h", "i", "j"};
 
@@ -59,8 +71,8 @@ public class ImageServiceImpl implements ImageService {
         currentContext.getAuthentication().getName());
 
     if (user.getPhoto() != null) {
-      File oldAvatar = new File("target/classes/static" +
-          user.getPhoto().replaceAll("\\\\", "/"));
+      File oldAvatar = new File(STATIC_PATH +
+          user.getPhoto().replaceAll(BACKSLASH_REGEX, SLASH_REGEX));
 
       try {
         FileUtils.deleteDirectory(oldAvatar.getParentFile());
@@ -83,22 +95,22 @@ public class ImageServiceImpl implements ImageService {
         newImage = originalImage;
       }
 
-      File dir = new File("target/classes/static/avatars/" +
+      File dir = new File(AVATARS_PATH +
           user.getId());
 
-      File image = new File(dir.getPath() + "/" + file.getOriginalFilename());
+      File image = new File(dir.getPath() + SLASH_REGEX + file.getOriginalFilename());
 
       if (dir.mkdirs()) {
         if (image.createNewFile()) {
           String format = Objects.requireNonNull(file.getOriginalFilename()).
-              substring(file.getOriginalFilename().lastIndexOf(".")
+              substring(file.getOriginalFilename().lastIndexOf(FILE_EXTENSION_SEPARATOR)
                   + INCREMENT_INDEX);
 
           ImageIO.write(newImage, format, image);
         }
       }
 
-      response.setImagePath(image.getPath().split("static")[INCREMENT_INDEX]);
+      response.setImagePath(image.getPath().split(STATIC_REGEX)[INCREMENT_INDEX]);
     } catch (IOException e) {
       e.printStackTrace();
     }
@@ -112,20 +124,20 @@ public class ImageServiceImpl implements ImageService {
     String contentType = file.getContentType();
 
     if (file.isEmpty()) {
-      errors.setSize("Файл пустой");
+      errors.setSize(EMPTY_FILE_ERROR);
       response.setImageErrors(errors);
       return false;
     }
 
     if (contentType == null ||
-        (!contentType.equals("image/jpeg") && !contentType.equals("image/png"))) {
-      errors.setImage("Недопустимый формат файла");
+        (!contentType.equals(JPG_CONTENT_TYPE) && !contentType.equals(PNG_CONTENT_TYPE))) {
+      errors.setImage(FORMAT_FILE_ERROR);
       response.setImageErrors(errors);
       return false;
     }
 
     if (file.getSize() > MAX_IMAGE_SIZE) {
-      errors.setSize("Размер файла превышает допустимый размер");
+      errors.setSize(SIZE_FILE_ERROR);
       response.setImageErrors(errors);
       return false;
     }
@@ -141,17 +153,19 @@ public class ImageServiceImpl implements ImageService {
 
     int index = INCREMENT_INDEX;
 
-    return new File("target/classes/static/upload/" +
+    return new File(UPLOAD_PATH +
         SYMBOLS[Short.parseShort(hash.substring(index, ++index))] +
         SYMBOLS[Short.parseShort(hash.substring(index, ++index))] +
-        "/" + SYMBOLS[Short.parseShort(hash.substring(index, ++index))] +
+        SLASH_REGEX +
         SYMBOLS[Short.parseShort(hash.substring(index, ++index))] +
-        "/" + SYMBOLS[Short.parseShort(hash.substring(index, ++index))] +
+        SYMBOLS[Short.parseShort(hash.substring(index, ++index))] +
+        SLASH_REGEX +
+        SYMBOLS[Short.parseShort(hash.substring(index, ++index))] +
         SYMBOLS[Short.parseShort(hash.substring(index, ++index))]);
   }
 
   private void createFile(MultipartFile file, File dir, ImageResponse response) {
-    File convertFile = new File(dir.getPath() + "/" + file.getOriginalFilename());
+    File convertFile = new File(dir.getPath() + SLASH_REGEX + file.getOriginalFilename());
 
     if (dir.mkdirs()) {
       try {
@@ -168,6 +182,6 @@ public class ImageServiceImpl implements ImageService {
     }
 
     response.setResult(true);
-    response.setImagePath(convertFile.getPath().split("static")[INCREMENT_INDEX]);
+    response.setImagePath(convertFile.getPath().split(STATIC_REGEX)[INCREMENT_INDEX]);
   }
 }

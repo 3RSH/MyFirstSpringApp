@@ -22,6 +22,8 @@ public class TagsServiceImpl implements TagsService {
   private static final int WEIGHT_INCREMENT = 1;
   private static final float WEIGHT_ROUND_FACTOR = 0.5F;
 
+  private static final String ANY_STRING_REGEX = ".*";
+
   private final TagsRepository tagsRepository;
   private final TagBindingsRepository tagBindingsRepository;
   private final PostsRepository postsRepository;
@@ -158,7 +160,7 @@ public class TagsServiceImpl implements TagsService {
     for (int i = 0; i < tags.size(); i++) {
       TagInfo tag = new TagInfo();
 
-      if (tags.get(i).getName().matches(query + ".*")) {
+      if (tags.get(i).getName().matches(query + ANY_STRING_REGEX)) {
         tag.setName(tags.get(i).getName());
         tag.setWeight(weights.get(i));
         tagInfoList.add(tag);

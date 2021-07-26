@@ -11,6 +11,12 @@ import org.springframework.stereotype.Service;
 @Service
 public class SettingsServiceImpl implements SettingsService {
 
+  private static final String MULTIUSER_SETTING_CODE = "MULTIUSER_MODE";
+  private static final String MODERATION_SETTING_CODE = "POST_PREMODERATION";
+  private static final String STATISTIC_SETTING_CODE = "STATISTICS_IS_PUBLIC";
+  private static final String SETTING_YES_VALUE = "YES";
+  private static final String SETTING_NO_VALUE = "NO";
+
   private final SettingsRepository repository;
 
 
@@ -27,16 +33,16 @@ public class SettingsServiceImpl implements SettingsService {
     for (GlobalSetting setting : allSettings) {
 
       switch (setting.getCode()) {
-        case ("MULTIUSER_MODE"):
-          settings.setMultiuserMode(setting.getValue().equals("YES"));
+        case (MULTIUSER_SETTING_CODE):
+          settings.setMultiuserMode(setting.getValue().equals(SETTING_YES_VALUE));
           break;
 
-        case ("POST_PREMODERATION"):
-          settings.setPostPremoderation(setting.getValue().equals("YES"));
+        case (MODERATION_SETTING_CODE):
+          settings.setPostPremoderation(setting.getValue().equals(SETTING_YES_VALUE));
           break;
 
-        case ("STATISTICS_IS_PUBLIC"):
-          settings.setStatisticsIsPublic(setting.getValue().equals("YES"));
+        case (STATISTIC_SETTING_CODE):
+          settings.setStatisticsIsPublic(setting.getValue().equals(SETTING_YES_VALUE));
           break;
       }
     }
@@ -51,18 +57,18 @@ public class SettingsServiceImpl implements SettingsService {
     for (GlobalSetting setting : settings) {
 
       switch (setting.getCode()) {
-        case ("MULTIUSER_MODE"):
-          setting.setValue(request.isMultiuserMode() ? "YES" : "NO");
+        case (MULTIUSER_SETTING_CODE):
+          setting.setValue(request.isMultiuserMode() ? SETTING_YES_VALUE : SETTING_NO_VALUE);
           repository.save(setting);
           break;
 
-        case ("POST_PREMODERATION"):
-          setting.setValue(request.isPostPremoderation() ? "YES" : "NO");
+        case (MODERATION_SETTING_CODE):
+          setting.setValue(request.isPostPremoderation() ? SETTING_YES_VALUE : SETTING_NO_VALUE);
           repository.save(setting);
           break;
 
-        case ("STATISTICS_IS_PUBLIC"):
-          setting.setValue(request.isStatisticsIsPublic() ? "YES" : "NO");
+        case (STATISTIC_SETTING_CODE):
+          setting.setValue(request.isStatisticsIsPublic() ? SETTING_YES_VALUE : SETTING_NO_VALUE);
           repository.save(setting);
           break;
       }
@@ -74,6 +80,6 @@ public class SettingsServiceImpl implements SettingsService {
   @Override
   public boolean getSetting(String code) {
     GlobalSetting setting = repository.findFirstByCodeContaining(code);
-    return setting != null && setting.getValue().equals("YES");
+    return setting != null && setting.getValue().equals(SETTING_YES_VALUE);
   }
 }
