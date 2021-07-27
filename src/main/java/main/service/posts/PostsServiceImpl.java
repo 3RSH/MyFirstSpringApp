@@ -2,13 +2,9 @@ package main.service.posts;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.security.Principal;
 import java.sql.Timestamp;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
@@ -67,6 +63,7 @@ public class PostsServiceImpl implements PostsService {
   private static final int FILENAME_END_INDEX_OFFSET = 2;
   private static final int PREPOST_STRING_LENGTH = 50;
   private static final int PREPOST_STRING_COUNT = 3;
+  private static final int FILE_LEVELS_COUNT = 3;
   private static final int LIKE_VALUE = 1;
   private static final int DISLIKE_VALUE = -1;
   private static final int MIN_TITLE_SIZE = 3;
@@ -84,16 +81,13 @@ public class PostsServiceImpl implements PostsService {
   private static final String ACCEPT_DECISION_VALUE = "accept";
   private static final String EMPTY_STRING = "";
   private static final String STATIC_PATH = "target/classes/static";
-  private static final String UPLOAD_PATH = "target/classes/static/upload";
-  private static final String END_IMAGES_PATH = "images/";
+  private static final String END_IMAGES_PATH = "upload/";
   private static final String TITLE_ERROR = "Заголовок не установлен";
   private static final String POST_TEXT_ERROR = "Текст публикации слишком короткий";
   private static final String COMMENT_ERROR = "Текст комментария не задан или слишком короткий";
 
   private static final String EMPTY_QUERY_REGEX = "\\s*";
   private static final String DATE_SEPARATOR_REGEX = "-";
-  private static final String UPLOAD_REGEX = "upload";
-  private static final String IMAGES_REGEX = "images";
   private static final String SLASH_REGEX = "/";
   private static final String BACKSLASH_REGEX = "\\\\";
   private static final String IMAGE_TAG_REGEX = "<img src=\".+?\">";
@@ -329,6 +323,7 @@ public class PostsServiceImpl implements PostsService {
             post.getComments().stream().noneMatch(
                 comment -> comment.getId() == request.getParentId()))) {
 
+      deleteFiles(getPathsFromText(request.getText()));
       return response;
     }
 
@@ -352,8 +347,6 @@ public class PostsServiceImpl implements PostsService {
     long currentTime = System.currentTimeMillis();
 
     comment.setTime(new Timestamp(currentTime));
-
-    request.setText(uploadingCommentImages(request.getText()));
 
     comment.setText(request.getText());
 
@@ -493,7 +486,11 @@ public class PostsServiceImpl implements PostsService {
 
     post.setTitle(title);
 
-    text = uploadingPostImages(text, post);
+    if (post.getText() == null) {
+      post.setText(EMPTY_STRING);
+    }
+
+    updateFiles(post, getPathsFromText(text));
 
     post.setText(text);
 
@@ -504,7 +501,19 @@ public class PostsServiceImpl implements PostsService {
     votesRepository.deleteAll(votesRepository.findAllByPost(post));
     votesRepository.flush();
 
-    post.setComments(new ArrayList<>());
+    List<PostComment> comments = commentsRepository.findAllByPost(post);
+
+    List<String> commentsImages = new ArrayList<>();
+
+    for (PostComment comment : comments) {
+      commentsImages.addAll(getPathsFromText(comment.getText()));
+    }
+
+    deleteFiles(commentsImages);
+
+    commentsRepository.deleteAll(comments);
+    commentsRepository.flush();
+
     post.setViewCount(DEFAULT_VALUE);
   }
 
@@ -542,68 +551,9 @@ public class PostsServiceImpl implements PostsService {
     }
   }
 
-  private String uploadingPostImages(String text, Post post) {
-    List<String> tempPaths = getPathsFromText(text);
-    List<String> paths = new ArrayList<>(Collections.nCopies(tempPaths.size(), EMPTY_STRING));
-
-    Collections.copy(paths, tempPaths);
-
-    for (int i = 0; i < paths.size(); i++) {
-      String path = paths.get(i).replaceFirst(UPLOAD_REGEX, IMAGES_REGEX);
-      paths.set(i, path);
-    }
-
-    for (int i = 0; i < tempPaths.size(); i++) {
-      text = text.replace(tempPaths.get(i), paths.get(i));
-    }
-
-    convertPathsForFile(tempPaths);
-    convertPathsForFile(paths);
-
-    copyFiles(tempPaths, paths);
-
-    Path uploadPath = Paths.get(UPLOAD_PATH);
-
-    if (Files.exists(uploadPath)) {
-      try {
-        FileUtils.cleanDirectory(uploadPath.toFile());
-      } catch (IOException e) {
-        e.printStackTrace();
-      }
-    }
-
-    updateFiles(post, paths);
-
-    return text;
-  }
-
-  private String uploadingCommentImages(String text) {
-    List<String> tempPaths = getPathsFromText(text);
-    List<String> paths = new ArrayList<>(Collections.nCopies(tempPaths.size(), EMPTY_STRING));
-
-    Collections.copy(paths, tempPaths);
-
-    for (int i = 0; i < paths.size(); i++) {
-      String path = paths.get(i).replaceFirst(UPLOAD_REGEX, IMAGES_REGEX);
-      paths.set(i, path);
-    }
-
-    for (int i = 0; i < tempPaths.size(); i++) {
-      text = text.replace(tempPaths.get(i), paths.get(i));
-    }
-
-    convertPathsForFile(tempPaths);
-    convertPathsForFile(paths);
-    copyFiles(tempPaths, paths);
-
-    return text;
-  }
-
   private void updateFiles(Post post, List<String> paths) {
     String originalText = post.getText();
     List<String> oldPaths = getPathsFromText(originalText);
-
-    convertPathsForFile(oldPaths);
 
     for (String path : paths) {
       oldPaths.remove(path);
@@ -613,32 +563,26 @@ public class PostsServiceImpl implements PostsService {
   }
 
   private void deleteFiles(List<String> source) {
+    convertPathsForFile(source);
+
     for (String path : source) {
-      path = path.substring(0, path.lastIndexOf(END_IMAGES_PATH) + IMAGE_PATH_OFFSET);
-      File dir = new File(path);
+      for (int i = 0; i < FILE_LEVELS_COUNT; i++) {
 
-      try {
-        FileUtils.deleteDirectory(dir);
-      } catch (IOException e) {
-        e.printStackTrace();
-      }
-    }
-  }
+        String targetPath =
+            path.substring(
+                0, path.lastIndexOf(END_IMAGES_PATH) + IMAGE_PATH_OFFSET + FILE_LEVELS_COUNT * i);
 
-  private void copyFiles(List<String> source, List<String> destination) {
-    for (int i = 0; i < source.size(); i++) {
+        File dir = new File(targetPath);
+        File[] files = dir.listFiles();
 
-      File sourceFile = new File(source.get(i));
-      String destPath = destination.get(i);
-      File destinationDir = new File(destPath.substring(0, destPath.lastIndexOf(SLASH_REGEX)));
-      File destinationFile = new File(destination.get(i));
+        if (files != null && files.length == 1) {
+          try {
+            FileUtils.deleteDirectory(dir);
+          } catch (IOException e) {
+            e.printStackTrace();
+          }
 
-      if (destinationDir.mkdirs()) {
-
-        try {
-          FileUtils.copyFile(sourceFile, destinationFile);
-        } catch (IOException e) {
-          e.printStackTrace();
+          break;
         }
       }
     }
@@ -709,23 +653,23 @@ public class PostsServiceImpl implements PostsService {
     StringBuilder announce = new StringBuilder();
     String text = post.getText().replaceAll(CLASSIC_HTML_TAG_REGEX, EMPTY_STRING)
         .replaceAll(SYMBOL_HTML_TAG_REGEX, EMPTY_STRING);
-
     int prepostMaxLength = PREPOST_STRING_COUNT * PREPOST_STRING_LENGTH;
 
     if (text.length() > prepostMaxLength) {
-      for (int i = 0; i < PREPOST_STRING_COUNT; ) {
-        announce.append(text, i + PREPOST_STRING_LENGTH, ++i * PREPOST_STRING_LENGTH);
-      }
+      announce.append(text, 0, PREPOST_STRING_LENGTH).append("\n")
+          .append(text, PREPOST_STRING_LENGTH, 2 * PREPOST_STRING_LENGTH).append("\n")
+          .append(text, 2 * PREPOST_STRING_LENGTH, 3 * PREPOST_STRING_LENGTH)
+          .append("...");
 
-      announce.append("...");
     } else if (text.length() > prepostMaxLength - PREPOST_STRING_LENGTH) {
-      for (int i = 0; i < PREPOST_STRING_COUNT; ) {
-        announce.append(text, i + PREPOST_STRING_LENGTH, ++i * PREPOST_STRING_LENGTH);
-      }
-    } else if (text.length() > PREPOST_STRING_LENGTH) {
-      for (int i = 0; i < PREPOST_STRING_COUNT - 1; ) {
-        announce.append(text, i + PREPOST_STRING_LENGTH, ++i * PREPOST_STRING_LENGTH);
-      }
+      announce.append(text, 0, PREPOST_STRING_LENGTH).append("\n")
+          .append(text, PREPOST_STRING_LENGTH, 2 * PREPOST_STRING_LENGTH).append("\n")
+          .append(text.substring(2 * PREPOST_STRING_LENGTH));
+
+    } else if (text.length() > prepostMaxLength - 2 * PREPOST_STRING_LENGTH) {
+      announce.append(text, 0, PREPOST_STRING_LENGTH).append("\n")
+          .append(text.substring(PREPOST_STRING_LENGTH));
+
     } else {
       return text;
     }

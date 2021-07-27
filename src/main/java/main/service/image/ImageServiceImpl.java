@@ -24,6 +24,7 @@ public class ImageServiceImpl implements ImageService {
   private static final int MAX_IMAGE_SIZE = 1_000_000;
   private static final int MAX_AVATAR_EXTENSION = 360;
   private static final int INCREMENT_INDEX = 1;
+  private static final int FILE_LEVELS_COUNT = 3;
   private static final String FILE_EXTENSION_SEPARATOR = ".";
   private static final String SLASH_REGEX = "/";
   private static final String BACKSLASH_REGEX = "\\\\";
@@ -153,15 +154,16 @@ public class ImageServiceImpl implements ImageService {
 
     int index = INCREMENT_INDEX;
 
-    return new File(UPLOAD_PATH +
-        SYMBOLS[Short.parseShort(hash.substring(index, ++index))] +
-        SYMBOLS[Short.parseShort(hash.substring(index, ++index))] +
-        SLASH_REGEX +
-        SYMBOLS[Short.parseShort(hash.substring(index, ++index))] +
-        SYMBOLS[Short.parseShort(hash.substring(index, ++index))] +
-        SLASH_REGEX +
-        SYMBOLS[Short.parseShort(hash.substring(index, ++index))] +
-        SYMBOLS[Short.parseShort(hash.substring(index, ++index))]);
+    StringBuilder pathFile = new StringBuilder().append(UPLOAD_PATH);
+
+    for (int i = 0; i < FILE_LEVELS_COUNT; i++) {
+      pathFile
+          .append(SYMBOLS[Short.parseShort(hash.substring(index, ++index))])
+          .append(SYMBOLS[Short.parseShort(hash.substring(index, ++index))])
+          .append(i == FILE_LEVELS_COUNT - 1 ? "" : SLASH_REGEX);
+    }
+
+    return new File(pathFile.toString());
   }
 
   private void createFile(MultipartFile file, File dir, ImageResponse response) {

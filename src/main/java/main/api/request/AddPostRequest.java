@@ -1,5 +1,6 @@
 package main.api.request;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.List;
 import lombok.Getter;
 import lombok.Setter;
@@ -20,6 +21,7 @@ public class AddPostRequest {
 
   @Getter
   @Setter
+  @JsonProperty("tags")
   List<String> tagNames;
 
   @Getter

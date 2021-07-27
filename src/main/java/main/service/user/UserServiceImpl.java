@@ -166,7 +166,9 @@ public class UserServiceImpl implements UserService {
       user.setPhoto(null);
 
     } else {
-      user.setPhoto(request.getPhoto());
+      if (request.getPhoto() != null) {
+        user.setPhoto(request.getPhoto());
+      }
     }
 
     usersRepository.saveAndFlush(user);
@@ -305,7 +307,9 @@ public class UserServiceImpl implements UserService {
       response.setResult(false);
     }
 
-    response.setResult(isCorrectUserData(name, email, password, errors));
+    if (!isCorrectUserData(name, email, password, errors)) {
+      response.setResult(false);
+    }
 
     if (usersRepository.findFirstByEmail(email) != null) {
       errors.setEmail(DOUBLE_EMAIL_ERROR_MESSAGE);
