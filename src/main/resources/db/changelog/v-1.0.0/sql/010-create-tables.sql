@@ -26,6 +26,8 @@ create table post_comments (
         primary key (id)
     );
 
+create sequence comments_id_seq start with 1 increment by 1;
+
 create table post_votes (
        id int4 not null,
         time TIMESTAMP WITH TIME ZONE not null,
@@ -34,6 +36,8 @@ create table post_votes (
         user_id int4 not null,
         primary key (id)
     );
+
+create sequence votes_id_seq start with 1 increment by 1;
 
 create table posts (
        id int4 not null,
@@ -47,6 +51,8 @@ create table posts (
         user_id int4 not null,
         primary key (id)
     );
+
+create sequence posts_id_seq start with 1 increment by 1;
 
 create table tag2post (
        id int4 not null,
@@ -62,6 +68,8 @@ create table tags (
         name varchar(255) not null,
         primary key (id)
     );
+
+create sequence tag_id_seq start with 1 increment by 1;
 
 create table users (
        id int4 not null,

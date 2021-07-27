@@ -10,6 +10,7 @@ import javax.persistence.Id;
 import javax.persistence.JoinColumn;
 import javax.persistence.JoinTable;
 import javax.persistence.ManyToMany;
+import javax.persistence.SequenceGenerator;
 import javax.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
@@ -19,7 +20,8 @@ import lombok.Setter;
 public class Tag {
 
   @Id
-  @GeneratedValue(strategy = GenerationType.AUTO)
+  @SequenceGenerator(name = "tagIdSeq", sequenceName = "tag_id_seq", allocationSize = 1)
+  @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "tagIdSeq")
   @Getter
   @Setter
   private int id;
@@ -29,11 +31,12 @@ public class Tag {
   @Setter
   private String name;
 
+
   @ManyToMany
   @JoinTable(name = "tag2post"
       , joinColumns = @JoinColumn(name = "tag_id")
       , inverseJoinColumns = @JoinColumn(name = "post_id"))
   @Getter
   @Setter
-  private Set<TagBinding> votes = new HashSet<>();
+  private Set<TagBinding> tagBindings = new HashSet<>();
 }

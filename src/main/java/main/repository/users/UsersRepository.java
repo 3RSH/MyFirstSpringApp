@@ -10,4 +10,6 @@ import org.springframework.stereotype.Service;
 public interface UsersRepository extends JpaRepository<User, Integer> {
 
   User findFirstByEmail(String email);
+
+  User findFirstByCode(String code);
 }

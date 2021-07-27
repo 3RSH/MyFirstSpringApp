@@ -19,6 +19,11 @@ import org.springframework.stereotype.Service;
 @Service
 public class CaptchaServiceImpl implements CaptchaService {
 
+  private static final int CAPTCHA_WIDTH = 100;
+  private static final int CAPTCHA_HEIGHT = 35;
+  private static final String CAPTCHA_FORMAT_NAME = "png";
+  private static final String CAPTCHA_START_STRING = "data:captchaImage/png;base64, ";
+
   private final CaptchaRepository captchaRepository;
 
   @Value("${captcha.lifetimeBySec}")
@@ -57,7 +62,7 @@ public class CaptchaServiceImpl implements CaptchaService {
 
     CaptchaResponse captchaResponse = new CaptchaResponse();
 
-    captchaResponse.setImage("data:captchaImage/png;base64, " + encodeImage);
+    captchaResponse.setImage(CAPTCHA_START_STRING + encodeImage);
     captchaResponse.setSecret(secret);
 
     return captchaResponse;
@@ -66,10 +71,10 @@ public class CaptchaServiceImpl implements CaptchaService {
   private byte[] compressImageAndGetByteArray(BufferedImage image) {
     byte[] result = new byte[0];
     image = Scalr.resize(image, Scalr.Method.AUTOMATIC, Scalr.Mode.AUTOMATIC,
-        100, 35, Scalr.OP_ANTIALIAS);
+        CAPTCHA_WIDTH, CAPTCHA_HEIGHT, Scalr.OP_ANTIALIAS);
 
     try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
-      ImageIO.write(image, "png", out);
+      ImageIO.write(image, CAPTCHA_FORMAT_NAME, out);
       result = out.toByteArray();
     } catch (IOException e) {
       e.printStackTrace();

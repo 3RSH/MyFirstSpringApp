@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity;
@@ -17,11 +18,19 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 
 @Configuration
 @EnableWebSecurity
 @EnableGlobalMethodSecurity(prePostEnabled = true)
 public class SecurityConfig extends WebSecurityConfigurerAdapter {
+
+  private static final int PASS_CRYPT_STRENGTH = 12;
+  private static final String DEFAULT_URL = "/";
+  private static final String ANY_URL = "/**";
+  private static final String LOGIN_URL = "/login";
+  private static final String LOGOUT_URL = "/api/auth/logout";
+  private static final String DELETE_COOKIE = "JSESSIONID";
 
   private final UserDetailsService userDetailsService;
 
@@ -34,20 +43,27 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
 
   @Override
+  @Bean
+  public AuthenticationManager authenticationManagerBean() throws Exception {
+    return super.authenticationManagerBean();
+
+  }
+
+  @Override
   protected void configure(HttpSecurity http) throws Exception {
     http
         .csrf().disable()
         .authorizeRequests()
-        .antMatchers("/**").permitAll()
+        .antMatchers(ANY_URL).permitAll()
         .anyRequest().authenticated()
         .and()
         .formLogin()
-        .loginPage("/login")
-        .defaultSuccessUrl("/", true)
+        .loginPage(LOGIN_URL)
+        .defaultSuccessUrl(DEFAULT_URL, true)
         .and()
         .logout()
-        .logoutUrl("/api/auth/logout")
-        .deleteCookies("JSESSIONID")
+        .logoutUrl(LOGOUT_URL)
+        .deleteCookies(DELETE_COOKIE)
         .logoutSuccessHandler((httpServletRequest, httpServletResponse, authentication) -> {
 
           SecurityContextHolder.clearContext();
@@ -61,12 +77,9 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
           httpServletResponse.getWriter().write(json);
           httpServletResponse.setStatus(HttpServletResponse.SC_OK);
         });
-  }
 
-  @Override
-  @Bean
-  public AuthenticationManager authenticationManagerBean() throws Exception {
-    return super.authenticationManagerBean();
+    http.exceptionHandling()
+        .authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED));
   }
 
   @Bean
@@ -81,6 +94,6 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
   @Bean
   protected PasswordEncoder passwordEncoder() {
-    return new BCryptPasswordEncoder(12);
+    return new BCryptPasswordEncoder(PASS_CRYPT_STRENGTH);
   }
 }

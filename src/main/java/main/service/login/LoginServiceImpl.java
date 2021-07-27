@@ -1,10 +1,11 @@
 package main.service.login;
 
 import java.security.Principal;
-import java.util.Map;
+import main.api.request.LoginRequest;
 import main.api.response.CheckLoginResponse;
 import main.api.response.UserResponse;
 import main.model.User;
+import main.repository.posts.PostsRepository;
 import main.repository.users.UsersRepository;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -19,38 +20,48 @@ import org.springframework.stereotype.Service;
 @Service
 public class LoginServiceImpl implements LoginService {
 
+  private static final int MODERATOR_MARKER = 1;
+  private static final int PASS_CRYPT_STRENGTH = 12;
+
   private final UsersRepository usersRepository;
+  private final PostsRepository postsRepository;
   private final AuthenticationManager authenticationManager;
 
 
   public LoginServiceImpl(
       @Qualifier("UsersRepository") UsersRepository usersRepository,
+      @Qualifier("PostsRepository") PostsRepository postsRepository,
       AuthenticationManager authenticationManager) {
     this.usersRepository = usersRepository;
+    this.postsRepository = postsRepository;
     this.authenticationManager = authenticationManager;
   }
 
 
   @Override
-  public CheckLoginResponse getLoginResponse(Map<String, String> loginRequest) {
-    String email = loginRequest.get("e_mail");
-    String password = loginRequest.get("password");
+  public CheckLoginResponse getLoginResponse(LoginRequest request) {
 
-    User user = usersRepository.findFirstByEmail(email);
+    User user = usersRepository.findFirstByEmail(request.getEmail());
 
-    if (user == null || !passwordEncoder().matches(password, user.getPassword())) {
+    if (user == null || !passwordEncoder().matches(request.getPassword(), user.getPassword())) {
       return new CheckLoginResponse();
     }
 
     Authentication auth = authenticationManager.authenticate(
-        new UsernamePasswordAuthenticationToken(email, password));
+        new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword()));
 
     SecurityContextHolder.getContext().setAuthentication(auth);
 
     UserDetails userDetails = (UserDetails) auth.getPrincipal();
 
-    return
-        getCheckLoginResponse(usersRepository.findFirstByEmail(userDetails.getUsername()));
+    user = usersRepository.findFirstByEmail(userDetails.getUsername());
+
+    if (user.getCode() != null) {
+      user.setCode(null);
+      usersRepository.saveAndFlush(user);
+    }
+
+    return getCheckLoginResponse(user);
   }
 
   @Override
@@ -63,12 +74,20 @@ public class LoginServiceImpl implements LoginService {
         getCheckLoginResponse(usersRepository.findFirstByEmail(principal.getName()));
   }
 
+
   private CheckLoginResponse getCheckLoginResponse(User user) {
     UserResponse userResponse = new UserResponse();
 
-    userResponse.setEmail(user.getEmail());
     userResponse.setId(user.getId());
-    userResponse.setModeration(user.getIsModerator() == 1);
+    userResponse.setName(user.getName());
+    userResponse.setPhoto(user.getPhoto());
+    userResponse.setEmail(user.getEmail());
+
+    if (user.getIsModerator() == MODERATOR_MARKER) {
+      userResponse.setModeration(true);
+      userResponse.setSetting(true);
+      userResponse.setModerationCount(postsRepository.getPendingPostsCount());
+    }
 
     CheckLoginResponse checkLoginResponse = new CheckLoginResponse();
 
@@ -79,6 +98,6 @@ public class LoginServiceImpl implements LoginService {
   }
 
   private PasswordEncoder passwordEncoder() {
-    return new BCryptPasswordEncoder(12);
+    return new BCryptPasswordEncoder(PASS_CRYPT_STRENGTH);
   }
 }

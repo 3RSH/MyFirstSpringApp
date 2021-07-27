@@ -39,3 +39,5 @@ values ('1', '1', '1', (select now()), '1'),
 ('38', '5', '12', (select now()), '-1'),
 ('39', '5', '15', (select now()), '1'),
 ('40', '5', '14', (select now()), '1');
+
+alter sequence votes_id_seq restart with 41;

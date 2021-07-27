@@ -18,7 +18,7 @@ public interface PostsRepository extends JpaRepository<Post, Integer> {
       "FROM Post p " +
       "WHERE p.isActive = 1 " +
       "AND p.moderationStatus = 'ACCEPTED' " +
-      "AND p.time <= CURRENT_DATE() " +
+      "AND p.time <= CURRENT_TIMESTAMP() " +
       "ORDER BY time DESC")
   Page<Post> findRecentPosts(Pageable pageable);
 
@@ -28,7 +28,7 @@ public interface PostsRepository extends JpaRepository<Post, Integer> {
       "ON c.post.id = p.id " +
       "WHERE p.isActive = 1 " +
       "AND p.moderationStatus = 'ACCEPTED' " +
-      "AND p.time <= CURRENT_DATE() " +
+      "AND p.time <= CURRENT_TIMESTAMP() " +
       "GROUP BY p.id " +
       "ORDER BY COUNT(*) DESC")
   Page<Post> findPopularPosts(Pageable pageable);
@@ -39,7 +39,7 @@ public interface PostsRepository extends JpaRepository<Post, Integer> {
       "ON v.post.id = p.id " +
       "WHERE p.isActive = 1 " +
       "AND p.moderationStatus = 'ACCEPTED' " +
-      "AND p.time <= CURRENT_DATE() " +
+      "AND p.time <= CURRENT_TIMESTAMP() " +
       "GROUP BY p.id " +
       "ORDER BY " +
       "SUM(" +
@@ -54,7 +54,7 @@ public interface PostsRepository extends JpaRepository<Post, Integer> {
       "FROM Post p " +
       "WHERE p.isActive = 1 " +
       "AND p.moderationStatus = 'ACCEPTED' " +
-      "AND p.time <= CURRENT_DATE() " +
+      "AND p.time <= CURRENT_TIMESTAMP() " +
       "ORDER BY time")
   Page<Post> findEarlyPosts(Pageable pageable);
 
@@ -64,7 +64,7 @@ public interface PostsRepository extends JpaRepository<Post, Integer> {
       "FROM Post p " +
       "WHERE p.isActive = 1 " +
       "AND p.moderationStatus = 'ACCEPTED' " +
-      "AND p.time <= CURRENT_DATE() " +
+      "AND p.time <= CURRENT_TIMESTAMP() " +
       "ORDER BY time")
   List<Timestamp> getPublishTimes();
 
@@ -72,11 +72,11 @@ public interface PostsRepository extends JpaRepository<Post, Integer> {
       "FROM Post p " +
       "WHERE p.isActive = 1 " +
       "AND p.moderationStatus = 'ACCEPTED' " +
-      "AND p.time <= CURRENT_DATE() " +
+      "AND p.time <= CURRENT_TIMESTAMP() " +
       "AND EXTRACT(year FROM p.time) = ?1 " +
       "AND EXTRACT(month FROM p.time) = ?2 " +
       "AND EXTRACT(day FROM p.time) = ?3 " +
-      "ORDER BY time")
+      "ORDER BY time DESC")
   Page<Post> findPostsByDate(int year, int month, int day, Pageable pageable);
 
   @Query("SELECT p " +
@@ -87,22 +87,22 @@ public interface PostsRepository extends JpaRepository<Post, Integer> {
       "ON t.id = b.tag.id " +
       "WHERE p.isActive = 1 " +
       "AND p.moderationStatus = 'ACCEPTED' " +
-      "AND p.time <= CURRENT_DATE() " +
+      "AND p.time <= CURRENT_TIMESTAMP() " +
       "AND t.name = ?1 " +
       "GROUP BY p.id " +
-      "ORDER BY time")
+      "ORDER BY time DESC")
   Page<Post> findPostsByTag(String tag, Pageable pageable);
 
   @Query("SELECT p " +
       "FROM Post p " +
       "WHERE p.id = ?1")
-  Post findPostsById(int id);
+  Post findPostById(int id);
 
   @Query("SELECT p " +
       "FROM Post p " +
       "WHERE p.isActive = 0 " +
       "AND p.user.id = ?1 " +
-      "ORDER BY p.id")
+      "ORDER BY p.id DESC")
   Page<Post> findInactivePostsByUser(int userId, Pageable pageable);
 
   @Query("SELECT p " +
@@ -110,7 +110,7 @@ public interface PostsRepository extends JpaRepository<Post, Integer> {
       "WHERE p.isActive = 1 " +
       "AND p.moderationStatus = 'NEW' " +
       "AND p.user.id = ?1 " +
-      "ORDER BY p.id")
+      "ORDER BY p.id DESC")
   Page<Post> findPendingPostsByUser(int userId, Pageable pageable);
 
   @Query("SELECT p " +
@@ -118,7 +118,7 @@ public interface PostsRepository extends JpaRepository<Post, Integer> {
       "WHERE p.isActive = 1 " +
       "AND p.moderationStatus = 'DECLINED' " +
       "AND p.user.id = ?1 " +
-      "ORDER BY p.id")
+      "ORDER BY p.id DESC")
   Page<Post> findDeclinedPostsByUser(int userId, Pageable pageable);
 
   @Query("SELECT p " +
@@ -126,6 +126,43 @@ public interface PostsRepository extends JpaRepository<Post, Integer> {
       "WHERE p.isActive = 1 " +
       "AND p.moderationStatus = 'ACCEPTED' " +
       "AND p.user.id = ?1 " +
-      "ORDER BY p.id")
+      "ORDER BY p.id DESC")
   Page<Post> findPublishedPostsByUser(int userId, Pageable pageable);
+
+  @Query("SELECT p " +
+      "FROM Post p " +
+      "WHERE p.isActive = 1 " +
+      "AND p.moderationStatus = 'ACCEPTED' " +
+      "AND p.user.id = ?1 " +
+      "ORDER BY p.id DESC")
+  List<Post> findPublishedPostsByUser(int userId);
+
+  @Query("SELECT COUNT(p) " +
+      "FROM Post p " +
+      "WHERE p.isActive = 1 " +
+      "AND p.moderationStatus = 'NEW'")
+  int getPendingPostsCount();
+
+  @Query("SELECT p " +
+      "FROM Post p " +
+      "WHERE p.isActive = 1 " +
+      "AND p.moderationStatus = 'NEW' " +
+      "ORDER BY p.time DESC")
+  Page<Post> findNewModeratedPosts(Pageable pageable);
+
+  @Query("SELECT p " +
+      "FROM Post p " +
+      "WHERE p.isActive = 1 " +
+      "AND p.moderationStatus = 'DECLINED' " +
+      "AND p.moderator.id = ?1 " +
+      "ORDER BY p.time DESC")
+  Page<Post> findDeclinedPostsByModerator(int moderatorId, Pageable pageable);
+
+  @Query("SELECT p " +
+      "FROM Post p " +
+      "WHERE p.isActive = 1 " +
+      "AND p.moderationStatus = 'ACCEPTED' " +
+      "AND p.moderator.id = ?1 " +
+      "ORDER BY p.time DESC")
+  Page<Post> findAcceptedPostsByModerator(int moderatorId, Pageable pageable);
 }

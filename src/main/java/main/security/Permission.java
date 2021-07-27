@@ -4,8 +4,8 @@ import lombok.Getter;
 
 public enum Permission {
 
-  USE("user:write"),
-  MODERATE("user:moderate");
+  USE("use"),
+  MODERATE("moderate");
 
 
   @Getter

@@ -10,6 +10,7 @@ import javax.persistence.Id;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.OneToOne;
+import javax.persistence.SequenceGenerator;
 import javax.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
@@ -19,7 +20,8 @@ import lombok.Setter;
 public class PostComment {
 
   @Id
-  @GeneratedValue(strategy = GenerationType.AUTO)
+  @SequenceGenerator(name = "commentsIdSeq", sequenceName = "comments_id_seq", allocationSize = 1)
+  @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "commentsIdSeq")
   @Getter
   @Setter
   private int id;
@@ -28,7 +30,7 @@ public class PostComment {
   @JoinColumn(name = "parent_id")
   @Getter
   @Setter
-  private PostComment parentPost;
+  private PostComment parentComment;
 
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "post_id", nullable = false)

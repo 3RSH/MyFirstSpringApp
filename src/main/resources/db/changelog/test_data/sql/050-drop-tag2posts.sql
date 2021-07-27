@@ -1,2 +1,1 @@
-delete from tag2post
-where id > 0 and id < 27;
+delete from tag2post;

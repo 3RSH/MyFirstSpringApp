@@ -1,7 +1,9 @@
 package main.model;
 
 import java.sql.Timestamp;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
@@ -17,6 +19,7 @@ import javax.persistence.ManyToMany;
 import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
 import javax.persistence.OneToOne;
+import javax.persistence.SequenceGenerator;
 import javax.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
@@ -26,7 +29,8 @@ import lombok.Setter;
 public class Post {
 
   @Id
-  @GeneratedValue(strategy = GenerationType.AUTO)
+  @SequenceGenerator(name = "postsIdSeq", sequenceName = "posts_id_seq", allocationSize = 1)
+  @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "postsIdSeq")
   @Getter
   @Setter
   private int id;
@@ -40,7 +44,7 @@ public class Post {
   @Enumerated(EnumType.STRING)
   @Getter
   @Setter
-  private ModerationStatusType moderationStatus = ModerationStatusType.NEW;
+  private ModerationStatusType moderationStatus;
 
   @OneToOne
   @JoinColumn(name = "moderator_id")
@@ -72,12 +76,12 @@ public class Post {
   @Column(name = "view_count", nullable = false)
   @Getter
   @Setter
-  private int viewCount = 0;
+  private int viewCount;
 
   @OneToMany(mappedBy = "post", cascade = CascadeType.ALL)
   @Getter
   @Setter
-  private Set<PostComment> comments = new HashSet<>();
+  private List<PostComment> comments = new ArrayList<>();
 
   @ManyToMany(cascade = CascadeType.ALL)
   @JoinTable(name = "tag2post"

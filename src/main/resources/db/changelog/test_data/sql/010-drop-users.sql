@@ -1,2 +1,1 @@
-delete from users
-where id > 0 and id < 11 ;
+delete from users;
