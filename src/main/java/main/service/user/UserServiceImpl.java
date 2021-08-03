@@ -51,7 +51,11 @@ public class UserServiceImpl implements UserService {
   private static final String DIGEST_TYPE = "MD5";
   private static final String STATIC_PATH = "target/classes/static";
   private static final String RESTORE_EMAIL_TITLE = "Восстановление пароля";
-  private static final String RESTORE_EMAIL_LINK = "http://localhost:8080/login/change-password/";
+
+  private static final String RESTORE_EMAIL_LINK = "https://derendyaev-java-skillbox.herokuapp.com"
+      + "/login/change-password/";
+//  private static final String RESTORE_EMAIL_LINK = "http://localhost:8080/login/change-password/";
+
   private static final String RESTORE_EMAIL_TEXT = "Для смены пароля перейдите по ссылке: "
       + "<a href=\"%s\">%s</a>";
   private static final String RESTORE_EMAIL_TYPE = "text/html; charset=UTF-8";

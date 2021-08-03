@@ -1,1 +1,1 @@
-web: java -jar target/MyFirstSpringApp-1.0.0.jar
+web: java -jar target/blog-engine-1.0.jar
