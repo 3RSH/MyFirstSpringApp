@@ -1,6 +1,7 @@
 package main.service.posts;
 
-import java.io.File;
+import com.cloudinary.Cloudinary;
+import com.cloudinary.utils.ObjectUtils;
 import java.io.IOException;
 import java.security.Principal;
 import java.sql.Timestamp;
@@ -39,7 +40,6 @@ import main.repository.tags.TagsRepository;
 import main.repository.users.UsersRepository;
 import main.repository.votes.VotesRepository;
 import main.security.Permission;
-import org.apache.commons.io.FileUtils;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -58,12 +58,10 @@ public class PostsServiceImpl implements PostsService {
   private static final int TIME_DIVIDER = 1000;
   private static final short ACTIVE_POST_MARKER = 1;
   private static final int DEFAULT_VALUE = 0;
-  private static final int IMAGE_PATH_OFFSET = 9;
   private static final int FILENAME_START_INDEX = 10;
   private static final int FILENAME_END_INDEX_OFFSET = 2;
   private static final int PREPOST_STRING_LENGTH = 50;
   private static final int PREPOST_STRING_COUNT = 3;
-  private static final int FILE_LEVELS_COUNT = 3;
   private static final int LIKE_VALUE = 1;
   private static final int DISLIKE_VALUE = -1;
   private static final int MIN_TITLE_SIZE = 3;
@@ -80,19 +78,28 @@ public class PostsServiceImpl implements PostsService {
   private static final String ACCEPTED_POST_MODE = "accepted";
   private static final String ACCEPT_DECISION_VALUE = "accept";
   private static final String EMPTY_STRING = "";
-  private static final String STATIC_PATH = "target/classes/static";
-  private static final String END_IMAGES_PATH = "upload/";
   private static final String TITLE_ERROR = "Заголовок не установлен";
   private static final String POST_TEXT_ERROR = "Текст публикации слишком короткий";
   private static final String COMMENT_ERROR = "Текст комментария не задан или слишком короткий";
+  private static final String CLOUDINARY_HOME = "devBlog";
+  private static final String TEMP_FOLDER = "devBlog/temp/";
+  private static final String IMAGES_FOLDER = "devBlog/postsImages/";
+  private static final String UPLOADER_OVERWRITE_PROP = "overwrite";
+  private static final String UPLOADER_INVALIDATE_PROP = "invalidate";
+  private static final String TRUE_VALUE = "true";
+
 
   private static final String EMPTY_QUERY_REGEX = "\\s*";
   private static final String DATE_SEPARATOR_REGEX = "-";
   private static final String SLASH_REGEX = "/";
   private static final String BACKSLASH_REGEX = "\\\\";
-  private static final String IMAGE_TAG_REGEX = "<img src=\".+?\">";
+  private static final String IMAGE_TAG_REGEX = "<img src=\"[^>]+devBlog/postsImages/[^>]+\">";
+  private static final String TEMP_IMAGE_TAG_REGEX = "<img src=\"[^>]+devBlog/temp/[^>]+\">";
   private static final String CLASSIC_HTML_TAG_REGEX = "<.*?>";
+
   private static final String SYMBOL_HTML_TAG_REGEX = "&[a-zA-Z]{1,10};";
+
+  private static final Cloudinary imageCloud = new Cloudinary();
 
   private final PostsRepository postsRepository;
   private final VotesRepository votesRepository;
@@ -109,6 +116,7 @@ public class PostsServiceImpl implements PostsService {
       @Qualifier("TagsRepository") TagsRepository tagsRepository,
       @Qualifier("TagBindingsRepository") TagBindingsRepository tagBindingsRepository,
       @Qualifier("CommentsRepository") CommentsRepository commentsRepository) {
+
     this.votesRepository = votesRepository;
     this.postsRepository = postsRepository;
     this.usersRepository = usersRepository;
@@ -140,9 +148,10 @@ public class PostsServiceImpl implements PostsService {
   @Override
   public PostPreviewResponse getMyPostsPreview(int offset, int limit, String status) {
     Pageable page = PageRequest.of(offset / limit, limit);
-    int userId = usersRepository.findFirstByEmail(
-        SecurityContextHolder.getContext().getAuthentication().getName()).
-        getId();
+    int userId = usersRepository
+        .findFirstByEmail(
+            SecurityContextHolder.getContext().getAuthentication().getName())
+        .getId();
 
     switch (status) {
       case (PENDING_POST_MODE):
@@ -161,6 +170,7 @@ public class PostsServiceImpl implements PostsService {
 
   @Override
   public PostPreviewResponse getPostsPreviewByQuery(int offset, int limit, String query) {
+
     if (query.matches(EMPTY_QUERY_REGEX)) {
       return getPostsPreview(offset, limit, RECENT_POST_MODE);
     }
@@ -267,13 +277,18 @@ public class PostsServiceImpl implements PostsService {
       return response;
     }
 
-    fillPost(
-        post,
-        request.getActive(),
-        request.getTimestamp(),
-        request.getTitle(),
-        request.getText(),
-        premoderationMode);
+    try {
+      fillPost(
+          post,
+          request.getActive(),
+          request.getTimestamp(),
+          request.getTitle(),
+          request.getText(),
+          premoderationMode);
+
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
 
     postsRepository.saveAndFlush(post);
     addTags(post, request.getTagNames());
@@ -297,13 +312,18 @@ public class PostsServiceImpl implements PostsService {
       return response;
     }
 
-    fillPost(
-        post,
-        request.getActive(),
-        request.getTimestamp(),
-        request.getTitle(),
-        request.getText(),
-        premoderationMode);
+    try {
+      fillPost(
+          post,
+          request.getActive(),
+          request.getTimestamp(),
+          request.getTitle(),
+          request.getText(),
+          premoderationMode);
+
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
 
     clearPostSubData(post);
     postsRepository.saveAndFlush(post);
@@ -313,7 +333,9 @@ public class PostsServiceImpl implements PostsService {
   }
 
   @Override
-  public synchronized PostEditResponse addComment(AddCommentRequest request, Principal principal) {
+  public synchronized PostEditResponse addComment(
+      AddCommentRequest request, Principal principal) {
+
     PostEditResponse response = new PostEditResponse();
     Post post = postsRepository.findPostById(request.getPostId());
 
@@ -323,7 +345,7 @@ public class PostsServiceImpl implements PostsService {
             post.getComments().stream().noneMatch(
                 comment -> comment.getId() == request.getParentId()))) {
 
-      deleteFiles(getPathsFromText(request.getText()));
+      deleteFiles(getPathsFromText(request.getText(), TEMP_IMAGE_TAG_REGEX));
       return response;
     }
 
@@ -348,7 +370,13 @@ public class PostsServiceImpl implements PostsService {
 
     comment.setTime(new Timestamp(currentTime));
 
-    comment.setText(request.getText());
+    try {
+      String text = saveNewFiles(post, request.getText());
+      comment.setText(text);
+
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
 
     commentsRepository.saveAndFlush(comment);
 
@@ -474,7 +502,7 @@ public class PostsServiceImpl implements PostsService {
 
   private void fillPost(
       Post post, short active, long timestamp,
-      String title, String text, boolean premoderationMode) {
+      String title, String text, boolean premoderationMode) throws IOException {
 
     post.setIsActive(active);
 
@@ -490,7 +518,9 @@ public class PostsServiceImpl implements PostsService {
       post.setText(EMPTY_STRING);
     }
 
-    updateFiles(post, getPathsFromText(text));
+    text = saveNewFiles(post, text);
+
+    updateFiles(post, getPathsFromText(text, IMAGE_TAG_REGEX));
 
     post.setText(text);
 
@@ -506,7 +536,7 @@ public class PostsServiceImpl implements PostsService {
     List<String> commentsImages = new ArrayList<>();
 
     for (PostComment comment : comments) {
-      commentsImages.addAll(getPathsFromText(comment.getText()));
+      commentsImages.addAll(getPathsFromText(comment.getText(), IMAGE_TAG_REGEX));
     }
 
     deleteFiles(commentsImages);
@@ -553,7 +583,7 @@ public class PostsServiceImpl implements PostsService {
 
   private void updateFiles(Post post, List<String> paths) {
     String originalText = post.getText();
-    List<String> oldPaths = getPathsFromText(originalText);
+    List<String> oldPaths = getPathsFromText(originalText, IMAGE_TAG_REGEX);
 
     for (String path : paths) {
       oldPaths.remove(path);
@@ -565,27 +595,65 @@ public class PostsServiceImpl implements PostsService {
   private void deleteFiles(List<String> source) {
     convertPathsForFile(source);
 
+    List<String> resources = new ArrayList<>();
+
     for (String path : source) {
-      for (int i = 0; i < FILE_LEVELS_COUNT; i++) {
-
-        String targetPath =
-            path.substring(
-                0, path.lastIndexOf(END_IMAGES_PATH) + IMAGE_PATH_OFFSET + FILE_LEVELS_COUNT * i);
-
-        File dir = new File(targetPath);
-        File[] files = dir.listFiles();
-
-        if (files != null && files.length == 1) {
-          try {
-            FileUtils.deleteDirectory(dir);
-          } catch (IOException e) {
-            e.printStackTrace();
-          }
-
-          break;
-        }
-      }
+      resources.add(path.substring(path.indexOf(CLOUDINARY_HOME), path.lastIndexOf(".")));
     }
+
+    try {
+      imageCloud.api().deleteResources(resources, ObjectUtils.emptyMap());
+
+    } catch (Exception e) {
+      e.printStackTrace();
+    }
+  }
+
+  private String saveNewFiles(Post post, String text) throws IOException {
+    List<String> tempPaths = getPathsFromText(text, TEMP_IMAGE_TAG_REGEX);
+    List<String> newPaths = new ArrayList<>(tempPaths.size());
+
+    convertPathsForFile(tempPaths);
+
+    SecurityContext currentContext = SecurityContextHolder.getContext();
+    User user = usersRepository.findFirstByEmail(
+        currentContext.getAuthentication().getName());
+
+    for (String path : tempPaths) {
+
+      String newPath = path.replaceFirst(
+          TEMP_FOLDER + user.getId() + SLASH_REGEX,
+          IMAGES_FOLDER + post.getId() + SLASH_REGEX);
+
+      newPaths.add(newPath);
+
+      String fromId = path.substring(
+          path.indexOf(CLOUDINARY_HOME), path.lastIndexOf("."));
+
+      String toId = newPath.substring(
+          newPath.indexOf(CLOUDINARY_HOME), newPath.lastIndexOf("."));
+
+      imageCloud.uploader().rename(fromId, toId, ObjectUtils.asMap(
+          UPLOADER_OVERWRITE_PROP, TRUE_VALUE,
+          UPLOADER_INVALIDATE_PROP, TRUE_VALUE));
+    }
+
+    try {
+      imageCloud.api().deleteResourcesByPrefix(
+          TEMP_FOLDER + user.getId(), ObjectUtils.emptyMap());
+
+      imageCloud.api().deleteFolder(
+          TEMP_FOLDER + user.getId(), ObjectUtils.emptyMap());
+
+    } catch (Exception e) {
+      e.printStackTrace();
+    }
+
+    for (int i = 0; i < tempPaths.size(); i++) {
+      text = text.replaceFirst(tempPaths.get(i), newPaths.get(i));
+    }
+
+    return text;
   }
 
   private void convertPathsForFile(List<String> paths) {
@@ -594,15 +662,14 @@ public class PostsServiceImpl implements PostsService {
 
       path = path.substring(FILENAME_START_INDEX, path.length() - FILENAME_END_INDEX_OFFSET);
       path = path.replaceAll(BACKSLASH_REGEX, SLASH_REGEX);
-      path = STATIC_PATH + path;
 
       paths.set(i, path);
     }
   }
 
-  private List<String> getPathsFromText(String text) {
+  private List<String> getPathsFromText(String text, String tagRegex) {
     List<String> paths = new ArrayList<>();
-    Pattern pattern = Pattern.compile(IMAGE_TAG_REGEX);
+    Pattern pattern = Pattern.compile(tagRegex);
     Matcher matcher = pattern.matcher(text);
 
     while (matcher.find()) {
