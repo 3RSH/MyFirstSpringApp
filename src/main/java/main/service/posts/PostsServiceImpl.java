@@ -459,7 +459,7 @@ public class PostsServiceImpl implements PostsService {
 
       case (ACCEPTED_POST_MODE):
         return getPostPreviewResponse(
-            postsRepository.findAcceptedPostsByModerator(moderatorId, page));
+            postsRepository.findAcceptedPosts(page));
 
       default:
         return getPostPreviewResponse(postsRepository.findNewModeratedPosts(page));
@@ -523,6 +523,10 @@ public class PostsServiceImpl implements PostsService {
     updateFiles(post, getPathsFromText(text, IMAGE_TAG_REGEX));
 
     post.setText(text);
+
+    if (isModerator()) {
+      post.setModerator(getCurrentUser());
+    }
 
     updateModerationStatus(post, premoderationMode);
   }

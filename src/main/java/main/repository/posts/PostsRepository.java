@@ -162,7 +162,6 @@ public interface PostsRepository extends JpaRepository<Post, Integer> {
       "FROM Post p " +
       "WHERE p.isActive = 1 " +
       "AND p.moderationStatus = 'ACCEPTED' " +
-      "AND p.moderator.id = ?1 " +
       "ORDER BY p.time DESC")
-  Page<Post> findAcceptedPostsByModerator(int moderatorId, Pageable pageable);
+  Page<Post> findAcceptedPosts(Pageable pageable);
 }
