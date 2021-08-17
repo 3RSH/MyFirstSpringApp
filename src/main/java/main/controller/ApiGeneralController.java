@@ -97,11 +97,14 @@ public class ApiGeneralController {
   @PostMapping(value = "/image", consumes = "multipart/form-data")
   @PreAuthorize("hasAuthority('use')")
   public ResponseEntity<?> addImage(@RequestParam(IMAGE_PARAMETER) MultipartFile file) {
-    ImageResponse response = imageService.addImage(file);
 
-    return response.isResult()
-        ? new ResponseEntity<>(response.getImagePath(), HttpStatus.OK)
-        : new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+    synchronized (imageService) {
+      ImageResponse response = imageService.addImage(file);
+
+      return response.isResult()
+          ? new ResponseEntity<>(response.getImagePath(), HttpStatus.OK)
+          : new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+    }
   }
 
   @PostMapping(value = "/comment", consumes = MediaType.APPLICATION_JSON_VALUE)
@@ -157,25 +160,28 @@ public class ApiGeneralController {
       @RequestParam(REMOVE_PHOTO_PARAMETER) short removePhoto,
       @RequestParam(name = PASSWORD_PARAMETER, required = false) String password) {
 
-    ImageResponse imageResponse = imageService.addAvatar(file);
+    synchronized (imageService) {
 
-    if (!imageResponse.isResult()) {
-      return new ResponseEntity<>(imageResponse, HttpStatus.BAD_REQUEST);
+      ImageResponse imageResponse = imageService.addAvatar(file);
+
+      if (!imageResponse.isResult()) {
+        return new ResponseEntity<>(imageResponse, HttpStatus.BAD_REQUEST);
+      }
+
+      EditProfileRequest request = new EditProfileRequest();
+
+      request.setName(name);
+      request.setEmail(email);
+      request.setPassword(password);
+      request.setRemovePhoto(removePhoto);
+      request.setPhoto(imageResponse.getImagePath());
+
+      EditProfileResponse response = userService.editUser(request);
+
+      return response.isResult()
+          ? new ResponseEntity<>(response, HttpStatus.UNAUTHORIZED)
+          : new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
     }
-
-    EditProfileRequest request = new EditProfileRequest();
-
-    request.setName(name);
-    request.setEmail(email);
-    request.setPassword(password);
-    request.setRemovePhoto(removePhoto);
-    request.setPhoto(imageResponse.getImagePath());
-
-    EditProfileResponse response = userService.editUser(request);
-
-    return response.isResult()
-        ? new ResponseEntity<>(response, HttpStatus.UNAUTHORIZED)
-        : new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
   }
 
   @PostMapping(value = "/moderation", consumes = MediaType.APPLICATION_JSON_VALUE)

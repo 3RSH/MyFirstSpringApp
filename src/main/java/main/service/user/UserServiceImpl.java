@@ -1,6 +1,7 @@
 package main.service.user;
 
-import java.io.File;
+import com.cloudinary.Cloudinary;
+import com.cloudinary.utils.ObjectUtils;
 import java.io.IOException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -30,8 +31,8 @@ import main.api.response.RestoreResponse;
 import main.model.User;
 import main.repository.captcha.CaptchaRepository;
 import main.repository.users.UsersRepository;
-import org.apache.commons.io.FileUtils;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -45,13 +46,9 @@ public class UserServiceImpl implements UserService {
       + "[A-Za-zА-Яа-яё0-9\\-]{0,20}\\s*[A-Za-zА-Яа-яё0-9\\-]{0,20}";
   private static final String EMAIL_REGEX = "^([a-z0-9_-]+\\.)*[a-z0-9_-]+@[a-z0-9_-]"
       + "+(\\.[a-z0-9_-]+)*\\.[a-z]{2,6}$";
-  private static final String SLASH_REGEX = "/";
-  private static final String BACKSLASH_REGEX = "\\\\";
   private static final String EMPTY_STRING = "";
   private static final String DIGEST_TYPE = "MD5";
-  private static final String STATIC_PATH = "target/classes/static";
   private static final String RESTORE_EMAIL_TITLE = "Восстановление пароля";
-  private static final String RESTORE_EMAIL_LINK = "http://localhost:8080/login/change-password/";
   private static final String RESTORE_EMAIL_TEXT = "Для смены пароля перейдите по ссылке: "
       + "<a href=\"%s\">%s</a>";
   private static final String RESTORE_EMAIL_TYPE = "text/html; charset=UTF-8";
@@ -62,11 +59,12 @@ public class UserServiceImpl implements UserService {
   private static final String DOUBLE_EMAIL_ERROR_MESSAGE = "Этот e-mail уже зарегистрирован";
   private static final String LINK_ERROR_MESSAGE = "Ссылка для восстановления пароля устарела. "
       + "<a href=\"/login/restore-password\">Запросить ссылку снова</a>";
+  private static final String CLOUDINARY_HOME = "devBlog";
 
   private static final String SENDER_EMAIL = "b00b4@mail.ru";
   private static final String SENDER_HOST = "smtp.mail.ru";
   private static final String SENDER_NAME = "b00b4";
-  private static final String SENDER_PASSWORD = "OxAmbVkhTCNndp4iabbT";
+
   private static final String AUTH_PROPERTY = "mail.smtp.auth";
   private static final String STARTTLS_PROPERTY = "mail.smtp.starttls.enable";
   private static final String HOST_PROPERTY = "mail.smtp.host";
@@ -77,13 +75,21 @@ public class UserServiceImpl implements UserService {
 
   private static final short NOT_MODERATOR_MARKER = -1;
   private static final int MIN_PASSWORD_SIZE = 6;
+  private static final Cloudinary imageCloud = new Cloudinary();
 
   private final UsersRepository usersRepository;
   private final CaptchaRepository captchaRepository;
 
+  @Value("${blog.mail.password}")
+  private String senderPassword;
+
+  @Value("${blog.mail.restoreUrl}")
+  private String restoreEmailLink;
+
 
   public UserServiceImpl(@Qualifier("UsersRepository") UsersRepository usersRepository,
       @Qualifier("CaptchaRepository") CaptchaRepository captchaRepository) {
+
     this.usersRepository = usersRepository;
     this.captchaRepository = captchaRepository;
   }
@@ -154,13 +160,18 @@ public class UserServiceImpl implements UserService {
     }
 
     if (request.getRemovePhoto() == 1) {
-      File file = new File(STATIC_PATH +
-          user.getPhoto().replaceAll(BACKSLASH_REGEX, SLASH_REGEX));
+      if (user.getPhoto() != null) {
+        String imageId = user.getPhoto();
 
-      try {
-        FileUtils.deleteDirectory(file.getParentFile());
-      } catch (IOException e) {
-        e.printStackTrace();
+        imageId = imageId.substring(
+            imageId.indexOf(CLOUDINARY_HOME), imageId.lastIndexOf("."));
+
+        try {
+          imageCloud.uploader().destroy(imageId, ObjectUtils.emptyMap());
+
+        } catch (IOException e) {
+          e.printStackTrace();
+        }
       }
 
       user.setPhoto(null);
@@ -249,7 +260,7 @@ public class UserServiceImpl implements UserService {
         new javax.mail.Authenticator() {
           @Override
           protected PasswordAuthentication getPasswordAuthentication() {
-            return new PasswordAuthentication(SENDER_NAME, SENDER_PASSWORD);
+            return new PasswordAuthentication(SENDER_NAME, senderPassword);
           }
         });
 
@@ -260,7 +271,7 @@ public class UserServiceImpl implements UserService {
       message.addRecipient(RecipientType.TO, new InternetAddress(email));
       message.setSubject(RESTORE_EMAIL_TITLE);
 
-      String link = RESTORE_EMAIL_LINK + hash;
+      String link = restoreEmailLink + hash;
 
       String text = String.format(RESTORE_EMAIL_TEXT, link, link);
 

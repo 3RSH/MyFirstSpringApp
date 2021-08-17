@@ -1,7 +1,8 @@
-spring.datasource.url: jdbc:postgresql://localhost:5432/workDB
+spring.datasource.url: jdbc:${DATABASE_URL}
 spring.datasource.username: root
 spring.datasource.password: qwerty
 spring.datasource.driver-class-name: org.postgresql.Driver
+server.port: ${PORT:8080}
 
 spring.jpa.database: postgresql
 spring.jpa.properties.hibernate.dialect: org.hibernate.dialect.PostgreSQL9Dialect
@@ -14,6 +15,9 @@ spring.servlet.multipart.max-request-size: 128MB
 spring.servlet.multipart.enabled: true
 
 spring.liquibase.change-log: "classpath:db/changelog/db.changelog-master.xml"
+
+blog.mail.password: ${MAIL_PASSWORD}
+blog.mail.restoreUrl: ${RESTORE_URL}
 
 blog.title: DevPub
 blog.subtitle: Рассказы разработчиков
