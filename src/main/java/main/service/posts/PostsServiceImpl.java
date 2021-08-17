@@ -6,6 +6,8 @@ import java.io.IOException;
 import java.security.Principal;
 import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
@@ -228,28 +230,7 @@ public class PostsServiceImpl implements PostsService {
     postResponse.setLikeCount(getLikesCountByPostId(post.getId()));
     postResponse.setDislikeCount(getDislikeCountByPostId(post.getId()));
     postResponse.setViewCount(post.getViewCount());
-
-    List<Comment> comments = new ArrayList<>();
-
-    for (PostComment pComment : post.getComments()) {
-      Comment comment = new Comment();
-
-      comment.setId(pComment.getId());
-      comment.setTimestamp(pComment.getTime().getTime() / TIME_DIVIDER);
-      comment.setText(pComment.getText());
-
-      CommentUserPreview cUser = new CommentUserPreview();
-
-      cUser.setId(pComment.getUser().getId());
-      cUser.setName(pComment.getUser().getName());
-      cUser.setPhoto(pComment.getUser().getPhoto());
-
-      comment.setUser(cUser);
-
-      comments.add(comment);
-    }
-
-    postResponse.setComments(comments);
+    postResponse.setComments(getComments(post.getComments()));
 
     List<String> tags = new ArrayList<>();
 
@@ -488,6 +469,64 @@ public class PostsServiceImpl implements PostsService {
     return response;
   }
 
+
+  private List<Comment> getComments(List<PostComment> postComments) {
+    postComments.sort(Comparator.comparingInt(PostComment::getId));
+    Collections.reverse(postComments);
+
+    List<Comment> comments = new ArrayList<>();
+    List<Integer> brakeIds = new ArrayList<>();
+
+    for (int i = 0; i < postComments.size(); i++) {
+
+      if (brakeIds.contains(postComments.get(i).getId()) ||
+          postComments.get(i).getParentComment() != null) {
+        continue;
+      }
+
+      collectComments(postComments.get(i), comments, postComments, brakeIds);
+    }
+
+    return comments;
+  }
+
+  private void collectComments(PostComment postComment, List<Comment> comments,
+      List<PostComment> postComments, List<Integer> brakeIds) {
+
+    comments.add(getComment(postComment));
+    brakeIds.add(postComment.getId());
+
+    for (int i = 0; i < postComments.size(); i++) {
+
+      if (brakeIds.contains(postComments.get(i).getId())) {
+        continue;
+      }
+
+      PostComment parentComment = postComments.get(i).getParentComment();
+
+      if (parentComment != null && postComment.getId() == parentComment.getId()) {
+        collectComments(postComments.get(i), comments, postComments, brakeIds);
+      }
+    }
+  }
+
+  private Comment getComment(PostComment postComment) {
+    Comment comment = new Comment();
+
+    comment.setId(postComment.getId());
+    comment.setTimestamp(postComment.getTime().getTime() / TIME_DIVIDER);
+    comment.setText(postComment.getText());
+
+    CommentUserPreview cUser = new CommentUserPreview();
+
+    cUser.setId(postComment.getUser().getId());
+    cUser.setName(postComment.getUser().getName());
+    cUser.setPhoto(postComment.getUser().getPhoto());
+
+    comment.setUser(cUser);
+
+    return comment;
+  }
 
   private PostEditResponse validatePostData(String title, String text) {
     PostEditResponse editResponse = new PostEditResponse();
