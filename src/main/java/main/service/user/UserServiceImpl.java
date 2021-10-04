@@ -61,9 +61,9 @@ public class UserServiceImpl implements UserService {
       + "<a href=\"/login/restore-password\">Запросить ссылку снова</a>";
   private static final String CLOUDINARY_HOME = "devBlog";
 
-  private static final String SENDER_EMAIL = "b00b4@mail.ru";
+  private static final String SENDER_EMAIL = "dev_blog@mail.ru";
   private static final String SENDER_HOST = "smtp.mail.ru";
-  private static final String SENDER_NAME = "b00b4";
+  private static final String SENDER_NAME = "dev_blog@mail.ru";
 
   private static final String AUTH_PROPERTY = "mail.smtp.auth";
   private static final String STARTTLS_PROPERTY = "mail.smtp.starttls.enable";
